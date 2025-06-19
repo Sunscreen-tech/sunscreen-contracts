@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./Hpu.sol";
+import "./Spf.sol";
 
 // Library contract that emits events for decryption, using a callback function to handle the decryption result
 contract TfheThresholdDecryption {

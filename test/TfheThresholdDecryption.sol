@@ -3,38 +3,38 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import "../contracts/TfheThresholdDecryption.sol";
-import "../contracts/Hpu.sol";
+import "../contracts/Spf.sol";
 
 // Mock contract that inherits from TfheThresholdDecryption
 contract MockDecryptionUser is TfheThresholdDecryption {
-    using Hpu for *;
+    using Spf for *;
 
     // Store decryption results for verification
     uint256 public lastDecryptedValue;
     bool public decryptionReceived;
 
-    // Library and program to use for HPU
-    Hpu.HpuLibrary public hpuLibrary;
-    Hpu.HpuProgram public program;
+    // Library and program to use for SPF
+    Spf.SpfLibrary public spfLibrary;
+    Spf.SpfProgram public program;
 
-    constructor(Hpu.HpuLibrary _hpuLibrary, Hpu.HpuProgram _program) {
-        hpuLibrary = _hpuLibrary;
+    constructor(Spf.SpfLibrary _spfLibrary, Spf.SpfProgram _program) {
+        spfLibrary = _spfLibrary;
         program = _program;
     }
 
-    // Function to execute an HPU program and request decryption of its output
-    function executeAndRequestDecryption(Hpu.HpuParameter[] calldata inputs, uint256 numOutputs)
+    // Function to execute an SPF program and request decryption of its output
+    function executeAndRequestDecryption(Spf.SpfParameter[] calldata inputs, uint256 numOutputs)
         external
-        returns (Hpu.HpuRunHandle)
+        returns (Spf.SpfRunHandle)
     {
-        // Run the HPU program
-        Hpu.HpuRunHandle runHandle = Hpu.requestHpu(hpuLibrary, program, inputs, numOutputs);
+        // Run the SPF program
+        Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs, numOutputs);
 
         // Get the zeroth output handle
-        Hpu.HpuParameter outputHandle = Hpu.getOutputHandle(runHandle, 0);
+        Spf.SpfParameter outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestThresholdDecryption(this.handleDecryptionResult.selector, Hpu.HpuParameter.unwrap(outputHandle));
+        requestThresholdDecryption(this.handleDecryptionResult.selector, Spf.SpfParameter.unwrap(outputHandle));
 
         return runHandle;
     }
@@ -53,7 +53,7 @@ contract MockDecryptionUser is TfheThresholdDecryption {
 }
 
 contract TfheThresholdDecryptionTest is Test {
-    using Hpu for *;
+    using Spf for *;
 
     // Constants for testing
     address constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
@@ -63,59 +63,59 @@ contract TfheThresholdDecryptionTest is Test {
 
     // Events to test against
     event RequestThresholdDecryption(
-        address indexed sender, address contractAddress, bytes4 callbackSelector, Hpu.HpuParameter param
+        address indexed sender, address contractAddress, bytes4 callbackSelector, Spf.SpfParameter param
     );
 
-    event RunProgramOnHpu(address indexed sender, Hpu.HpuRun run);
+    event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
 
     function setUp() public {
-        // Create some test HPU library and program identifiers
-        Hpu.HpuLibrary hpuLibrary = Hpu.HpuLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Hpu.HpuProgram program = Hpu.HpuProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
+        // Create some test SPF library and program identifiers
+        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
+        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
 
         // Deploy the mock user contract
-        mockUser = new MockDecryptionUser(hpuLibrary, program);
+        mockUser = new MockDecryptionUser(spfLibrary, program);
     }
 
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
-        Hpu.HpuParameter[] memory inputs = new Hpu.HpuParameter[](2);
-        inputs[0] = Hpu.HpuParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
-        inputs[1] = Hpu.HpuParameter.wrap(bytes32(uint256(0x002222222222222222222222222222222222222222)));
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
+        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
+        inputs[1] = Spf.SpfParameter.wrap(bytes32(uint256(0x002222222222222222222222222222222222222222)));
 
         uint256 numOutputs = 1;
 
-        // Expect RunProgramOnHpu event
+        // Expect RunProgramOnSpf event
         vm.expectEmit(true, true, false, true);
 
         // Calculate expected extended parameters
-        Hpu.HpuParameter[] memory expectedParams = new Hpu.HpuParameter[](3);
+        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
         expectedParams[0] = inputs[0];
         expectedParams[1] = inputs[1];
-        expectedParams[2] = Hpu.HpuParameter.wrap(bytes32(0));
+        expectedParams[2] = Spf.SpfParameter.wrap(bytes32(0));
 
-        // Create expected HpuRun
-        Hpu.HpuRun memory expectedRun =
-            Hpu.HpuRun({hpuLibrary: mockUser.hpuLibrary(), program: mockUser.program(), parameters: expectedParams});
+        // Create expected SpfRun
+        Spf.SpfRun memory expectedRun =
+            Spf.SpfRun({spfLibrary: mockUser.spfLibrary(), program: mockUser.program(), parameters: expectedParams});
 
-        emit RunProgramOnHpu(address(this), expectedRun);
+        emit RunProgramOnSpf(address(this), expectedRun);
 
         // Also expect RequestThresholdDecryption event
         vm.expectEmit(true, true, true, true);
 
         // Calculate expected output handle
-        Hpu.HpuRunHandle expectedRunHandle = Hpu.HpuRunHandle.wrap(keccak256(abi.encode(expectedRun)));
-        Hpu.HpuParameter expectedOutputHandle = Hpu.getOutputHandle(expectedRunHandle, 0);
+        Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(keccak256(abi.encode(expectedRun)));
+        Spf.SpfParameter expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit RequestThresholdDecryption(
             address(this), address(mockUser), MockDecryptionUser.handleDecryptionResult.selector, expectedOutputHandle
         );
 
         // Execute the function
-        Hpu.HpuRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
+        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
 
         // Verify returned run handle
-        assertEq(Hpu.HpuRunHandle.unwrap(runHandle), keccak256(abi.encode(expectedRun)));
+        assertEq(Spf.SpfRunHandle.unwrap(runHandle), keccak256(abi.encode(expectedRun)));
 
         // Verify that no decryption has been received yet
         assertFalse(mockUser.decryptionReceived());
@@ -147,23 +147,23 @@ contract TfheThresholdDecryptionTest is Test {
 
     function test_MultipleOutputs() public {
         // Create test input parameters
-        Hpu.HpuParameter[] memory inputs = new Hpu.HpuParameter[](1);
-        inputs[0] = Hpu.HpuParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
+        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
 
         uint256 numOutputs = 3;
 
         // Execute the function
-        Hpu.HpuRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
+        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
 
         // Verify we can get all output handles
-        Hpu.HpuParameter output0 = Hpu.getOutputHandle(runHandle, 0);
-        Hpu.HpuParameter output1 = Hpu.getOutputHandle(runHandle, 1);
-        Hpu.HpuParameter output2 = Hpu.getOutputHandle(runHandle, 2);
+        Spf.SpfParameter output0 = Spf.getOutputHandle(runHandle, 0);
+        Spf.SpfParameter output1 = Spf.getOutputHandle(runHandle, 1);
+        Spf.SpfParameter output2 = Spf.getOutputHandle(runHandle, 2);
 
         // Verify each output handle is unique
-        assertTrue(Hpu.HpuParameter.unwrap(output0) != Hpu.HpuParameter.unwrap(output1));
-        assertTrue(Hpu.HpuParameter.unwrap(output1) != Hpu.HpuParameter.unwrap(output2));
-        assertTrue(Hpu.HpuParameter.unwrap(output0) != Hpu.HpuParameter.unwrap(output2));
+        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output1));
+        assertTrue(Spf.SpfParameter.unwrap(output1) != Spf.SpfParameter.unwrap(output2));
+        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output2));
 
         // Verify the first output was requested for decryption
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
