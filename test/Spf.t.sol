@@ -34,8 +34,12 @@ contract SpfWrapper {
 contract SpfTest is Test {
     Spf.SpfLibrary constant SPF_LIBRARY =
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
-    Spf.SpfProgram constant PROGRAM =
+    Spf.SpfProgram constant SPF_PROGRAM =
         Spf.SpfProgram.wrap(0x70726f6772616d00000000000000000000000000000000000000000000000000);
+    Spf.SpfRunHandle constant SPF_RUN_HANDLE =
+        Spf.SpfRunHandle.wrap(0x7ab8b802b6bcd9051f054bdbdf7b73771f433b8c9822235a3baab8408df372ef);
+    Spf.SpfRunHandle constant SPF_ALT_RUN_HANDLE =
+        Spf.SpfRunHandle.wrap(0x10a6c10e36bfd52b3a8f33b33ffcc4ee2b0842c7bc1c5d3a3f6c5fa74aeee315);
     Spf.SpfParameter constant PARAM_ZERO = Spf.SpfParameter.wrap(0);
     Spf.SpfParameter constant PARAM_1 =
         Spf.SpfParameter.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
@@ -71,14 +75,14 @@ contract SpfTest is Test {
         expectedParams[3] = PARAM_ZERO;
 
         // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, PROGRAM, expectedParams);
+        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, SPF_PROGRAM, expectedParams);
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, false, true);
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
+        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs, numOutputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
@@ -92,7 +96,7 @@ contract SpfTest is Test {
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No inputs provided");
-        spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
+        spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs, numOutputs);
     }
 
     function test_RequestSpf_RequireOutputs() public {
@@ -103,7 +107,7 @@ contract SpfTest is Test {
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
-        spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
+        spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs, numOutputs);
     }
 
     function test_RequestSpf_ExtendedParameters() public {
@@ -121,14 +125,14 @@ contract SpfTest is Test {
         expectedParams[3] = PARAM_ZERO;
 
         // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, PROGRAM, expectedParams);
+        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, SPF_PROGRAM, expectedParams);
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, false, true);
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
+        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs, numOutputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
@@ -136,14 +140,10 @@ contract SpfTest is Test {
     }
 
     function test_GetOutputHandle() public view {
-        // Create a test run handle
-        bytes32 testRunHash = bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef));
-        Spf.SpfRunHandle runHandle = Spf.SpfRunHandle.wrap(testRunHash);
-
         // Test output handles for different indices
-        Spf.SpfParameter output0 = spfWrapper.exposedGetOutputHandle(runHandle, 0);
-        Spf.SpfParameter output1 = spfWrapper.exposedGetOutputHandle(runHandle, 1);
-        Spf.SpfParameter output2 = spfWrapper.exposedGetOutputHandle(runHandle, 2);
+        Spf.SpfParameter output0 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0);
+        Spf.SpfParameter output1 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 1);
+        Spf.SpfParameter output2 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 2);
 
         // Verify each output handle is unique
         assertNotEq(Spf.SpfParameter.unwrap(output0), Spf.SpfParameter.unwrap(output1));
@@ -151,37 +151,30 @@ contract SpfTest is Test {
         assertNotEq(Spf.SpfParameter.unwrap(output0), Spf.SpfParameter.unwrap(output2));
 
         // Verify deterministic output - same input parameters should result in same output handles
-        Spf.SpfParameter output0Again = spfWrapper.exposedGetOutputHandle(runHandle, 0);
+        Spf.SpfParameter output0Again = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0);
         assertEq(Spf.SpfParameter.unwrap(output0), Spf.SpfParameter.unwrap(output0Again));
 
         // Verify output handles are correctly derived from the run handle and index
-        bytes32 expectedOutput0 = keccak256(abi.encodePacked(runHandle, uint8(0)));
+        bytes32 expectedOutput0 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(0)));
         assertEq(Spf.SpfParameter.unwrap(output0), expectedOutput0);
 
-        bytes32 expectedOutput1 = keccak256(abi.encodePacked(runHandle, uint8(1)));
+        bytes32 expectedOutput1 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(1)));
         assertEq(Spf.SpfParameter.unwrap(output1), expectedOutput1);
     }
 
     function test_GetOutputHandle_DifferentRuns() public view {
-        // Create two different run handles
-        bytes32 testRunHash1 = bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef));
-        bytes32 testRunHash2 = bytes32(uint256(0x0000fedcba0987654321fedcba0987654321fedcba));
-
-        Spf.SpfRunHandle runHandle1 = Spf.SpfRunHandle.wrap(testRunHash1);
-        Spf.SpfRunHandle runHandle2 = Spf.SpfRunHandle.wrap(testRunHash2);
-
         // Verify output handles are correctly derived from the run handle and index
-        bytes32 expectedOutput0 = keccak256(abi.encodePacked(runHandle1, uint8(0)));
-        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(runHandle1, 0)), expectedOutput0);
+        bytes32 expectedOutput0 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(0)));
+        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0)), expectedOutput0);
 
-        bytes32 expectedOutput1 = keccak256(abi.encodePacked(runHandle1, uint8(1)));
-        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(runHandle1, 1)), expectedOutput1);
+        bytes32 expectedOutput1 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(1)));
+        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 1)), expectedOutput1);
 
-        bytes32 expectedOutput2 = keccak256(abi.encodePacked(runHandle2, uint8(0)));
-        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(runHandle2, 0)), expectedOutput2);
+        bytes32 expectedOutput2 = keccak256(abi.encodePacked(SPF_ALT_RUN_HANDLE, uint8(0)));
+        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(SPF_ALT_RUN_HANDLE, 0)), expectedOutput2);
 
-        bytes32 expectedOutput3 = keccak256(abi.encodePacked(runHandle2, uint8(1)));
-        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(runHandle2, 1)), expectedOutput3);
+        bytes32 expectedOutput3 = keccak256(abi.encodePacked(SPF_ALT_RUN_HANDLE, uint8(1)));
+        assertEq(Spf.SpfParameter.unwrap(spfWrapper.exposedGetOutputHandle(SPF_ALT_RUN_HANDLE, 1)), expectedOutput3);
     }
 
     function test_outputHash() public pure {
@@ -193,7 +186,7 @@ contract SpfTest is Test {
         parameters[3] = PARAM_4;
 
         // Create SpfRun struct
-        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: parameters});
+        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: parameters});
 
         // Calculate the hash using the library function
         bytes32 calculatedHash = Spf.outputHash(run);
@@ -212,7 +205,7 @@ contract SpfTest is Test {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
-        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: emptyParams});
+        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: emptyParams});
 
         // Calculate the hash using the library function
         bytes32 calculatedHash = Spf.outputHash(run);
@@ -229,13 +222,13 @@ contract SpfTest is Test {
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](1);
         params1[0] = PARAM_1;
 
-        Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: params1});
+        Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params1});
 
         // Create second SpfRun struct with slightly different parameters
         Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](1);
         params2[0] = PARAM_2; // Different value
 
-        Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: params2});
+        Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params2});
 
         // Get hashes for both runs
         bytes32 hash1 = Spf.outputHash(run1);
@@ -246,10 +239,8 @@ contract SpfTest is Test {
     }
 
     function test_getOutputHandleMatchesService() public pure {
-        Spf.SpfRunHandle runHash =
-            Spf.SpfRunHandle.wrap(0x7ab8b802b6bcd9051f054bdbdf7b73771f433b8c9822235a3baab8408df372ef);
         assertEq(
-            Spf.SpfParameter.unwrap(Spf.getOutputHandle(runHash, 2)),
+            Spf.SpfParameter.unwrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 2)),
             0xf3ebbcd8d825a5eea4226ff24917bd903549eac69a2e9b2a152eccf026cc3a0e
         );
     }
