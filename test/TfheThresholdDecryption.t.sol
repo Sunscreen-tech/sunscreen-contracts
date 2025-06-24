@@ -57,6 +57,16 @@ contract TfheThresholdDecryptionTest is Test {
 
     // Constants for testing
     address constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
+    uint256 constant DECRYPTED_VALUE = 123;
+    Spf.SpfLibrary constant SPF_LIBRARY =
+        Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
+    Spf.SpfProgram constant PROGRAM =
+        Spf.SpfProgram.wrap(0x70726F6772616D00000000000000000000000000000000000000000000000000);
+    Spf.SpfParameter constant PARAM_ZERO = Spf.SpfParameter.wrap(0);
+    Spf.SpfParameter constant PARAM_1 =
+        Spf.SpfParameter.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
+    Spf.SpfParameter constant PARAM_2 =
+        Spf.SpfParameter.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
 
     // Test contract instances
     MockDecryptionUser public mockUser;
@@ -69,19 +79,15 @@ contract TfheThresholdDecryptionTest is Test {
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
 
     function setUp() public {
-        // Create some test SPF library and program identifiers
-        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
-
         // Deploy the mock user contract
-        mockUser = new MockDecryptionUser(spfLibrary, program);
+        mockUser = new MockDecryptionUser(SPF_LIBRARY, PROGRAM);
     }
 
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
-        inputs[1] = Spf.SpfParameter.wrap(bytes32(uint256(0x002222222222222222222222222222222222222222)));
+        inputs[0] = PARAM_1;
+        inputs[1] = PARAM_2;
 
         uint256 numOutputs = 1;
 
@@ -92,7 +98,7 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
         expectedParams[0] = inputs[0];
         expectedParams[1] = inputs[1];
-        expectedParams[2] = Spf.SpfParameter.wrap(bytes32(0));
+        expectedParams[2] = PARAM_ZERO;
 
         // Create expected SpfRun
         Spf.SpfRun memory expectedRun =
@@ -121,34 +127,31 @@ contract TfheThresholdDecryptionTest is Test {
         assertFalse(mockUser.decryptionReceived());
         assertEq(mockUser.lastDecryptedValue(), 0);
 
-        // Simulate response from the threshold decryption service
-        uint256 mockDecryptedValue = 42;
-
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(mockDecryptedValue);
+        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
 
         // Verify that decryption was received and stored correctly
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), mockDecryptedValue);
+        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
     }
 
     function test_OnlyThresholdDecryption() public {
         // Try to call the callback function from an unauthorized address
         vm.expectRevert("Only the threshold decryption service can call this function");
-        mockUser.handleDecryptionResult(123);
+        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
 
         // Verify it works when called from the threshold decryption service
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(123);
+        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), 123);
+        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
     }
 
     function test_MultipleOutputs() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
+        inputs[0] = PARAM_1;
 
         uint256 numOutputs = 3;
 
@@ -167,7 +170,7 @@ contract TfheThresholdDecryptionTest is Test {
 
         // Verify the first output was requested for decryption
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(123);
+        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
     }
@@ -175,10 +178,10 @@ contract TfheThresholdDecryptionTest is Test {
     function test_ResetDecryptionState() public {
         // Set decryption state
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(123);
+        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), 123);
+        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
 
         // Reset state
         mockUser.resetDecryptionState();
