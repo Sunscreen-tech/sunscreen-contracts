@@ -23,18 +23,18 @@ contract MockDecryptionUser is TfheThresholdDecryption {
     }
 
     // Function to execute an SPF program and request decryption of its output
-    function executeAndRequestDecryption(Spf.SpfParameter[] calldata inputs, uint256 numOutputs)
+    function executeAndRequestDecryption(Spf.SpfParamDescription[] calldata inputs)
         external
         returns (Spf.SpfRunHandle)
     {
         // Run the SPF program
-        Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs, numOutputs);
+        Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs);
 
         // Get the zeroth output handle
-        Spf.SpfParameter outputHandle = Spf.getOutputHandle(runHandle, 0);
+        Spf.SpfCiphertextHash outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestThresholdDecryption(this.handleDecryptionResult.selector, Spf.SpfParameter.unwrap(outputHandle));
+        requestThresholdDecryption(this.handleDecryptionResult.selector, Spf.SpfCiphertextHash.unwrap(outputHandle));
 
         return runHandle;
     }
@@ -63,17 +63,17 @@ contract TfheThresholdDecryptionTest is Test {
     Spf.SpfProgram constant PROGRAM =
         Spf.SpfProgram.wrap(0x70726F6772616D00000000000000000000000000000000000000000000000000);
     Spf.SpfParameter constant PARAM_ZERO = Spf.SpfParameter.wrap(0);
-    Spf.SpfParameter constant PARAM_1 =
-        Spf.SpfParameter.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
-    Spf.SpfParameter constant PARAM_2 =
-        Spf.SpfParameter.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
+    Spf.SpfCiphertextHash constant PARAM_1 =
+        Spf.SpfCiphertextHash.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
+    Spf.SpfCiphertextHash constant PARAM_2 =
+        Spf.SpfCiphertextHash.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
 
     // Test contract instances
     MockDecryptionUser public mockUser;
 
     // Events to test against
     event RequestThresholdDecryption(
-        address indexed sender, address contractAddress, bytes4 callbackSelector, Spf.SpfParameter param
+        address indexed sender, address contractAddress, bytes4 callbackSelector, Spf.SpfCiphertextHash param
     );
 
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
@@ -85,20 +85,42 @@ contract TfheThresholdDecryptionTest is Test {
 
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = PARAM_1;
-        inputs[1] = PARAM_2;
+        Spf.SpfCiphertextHash[][] memory hashes = new Spf.SpfCiphertextHash[][](2);
+        hashes[0] = new Spf.SpfCiphertextHash[](1);
+        hashes[0][0] = PARAM_1;
+        hashes[1] = new Spf.SpfCiphertextHash[](1);
+        hashes[1][0] = PARAM_2;
 
-        uint256 numOutputs = 1;
+        Spf.SpfParamDescription[] memory inputs = new Spf.SpfParamDescription[](3);
+        inputs[0] = Spf.SpfParamDescription({
+            param_type: Spf.SpfParamType.Ciphertext,
+            meta_data: 0,
+            ciphertexts: hashes[0],
+            plaintexts: new Spf.SpfPlaintext[](0)
+        });
+        inputs[1] = Spf.SpfParamDescription({
+            param_type: Spf.SpfParamType.Ciphertext,
+            meta_data: 0,
+            ciphertexts: hashes[1],
+            plaintexts: new Spf.SpfPlaintext[](0)
+        });
+        inputs[2] = Spf.SpfParamDescription({
+            param_type: Spf.SpfParamType.OutputCiphertextArray,
+            meta_data: 4,
+            ciphertexts: new Spf.SpfCiphertextHash[](0),
+            plaintexts: new Spf.SpfPlaintext[](0)
+        });
 
         // Expect RunProgramOnSpf event
         vm.expectEmit(true, true, false, true);
 
-        // Calculate expected extended parameters
-        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
-        expectedParams[0] = inputs[0];
-        expectedParams[1] = inputs[1];
+        // Calculate expected parameters
+        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](5);
+        expectedParams[0] = PARAM_ZERO;
+        expectedParams[1] = Spf.SpfParameter.wrap(Spf.SpfCiphertextHash.unwrap(hashes[0][0]));
         expectedParams[2] = PARAM_ZERO;
+        expectedParams[3] = Spf.SpfParameter.wrap(Spf.SpfCiphertextHash.unwrap(hashes[1][0]));
+        expectedParams[4] = Spf.SpfParameter.wrap(0x0204000000000000000000000000000000000000000000000000000000000000);
 
         // Create expected SpfRun
         Spf.SpfRun memory expectedRun =
@@ -111,14 +133,14 @@ contract TfheThresholdDecryptionTest is Test {
 
         // Calculate expected output handle
         Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(keccak256(abi.encode(expectedRun)));
-        Spf.SpfParameter expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
+        Spf.SpfCiphertextHash expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit RequestThresholdDecryption(
             address(this), address(mockUser), MockDecryptionUser.handleDecryptionResult.selector, expectedOutputHandle
         );
 
         // Execute the function
-        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
+        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);
 
         // Verify returned run handle
         assertEq(Spf.SpfRunHandle.unwrap(runHandle), keccak256(abi.encode(expectedRun)));
@@ -150,23 +172,35 @@ contract TfheThresholdDecryptionTest is Test {
 
     function test_MultipleOutputs() public {
         // Create test input parameters
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = PARAM_1;
+        Spf.SpfCiphertextHash[] memory hashes = new Spf.SpfCiphertextHash[](1);
+        hashes[0] = PARAM_1;
 
-        uint256 numOutputs = 3;
+        Spf.SpfParamDescription[] memory inputs = new Spf.SpfParamDescription[](2);
+        inputs[0] = Spf.SpfParamDescription({
+            param_type: Spf.SpfParamType.Ciphertext,
+            meta_data: 0,
+            ciphertexts: hashes,
+            plaintexts: new Spf.SpfPlaintext[](0)
+        });
+        inputs[1] = Spf.SpfParamDescription({
+            param_type: Spf.SpfParamType.OutputCiphertextArray,
+            meta_data: 12,
+            ciphertexts: new Spf.SpfCiphertextHash[](0),
+            plaintexts: new Spf.SpfPlaintext[](0)
+        });
 
         // Execute the function
-        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs, numOutputs);
+        Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);
 
         // Verify we can get all output handles
-        Spf.SpfParameter output0 = Spf.getOutputHandle(runHandle, 0);
-        Spf.SpfParameter output1 = Spf.getOutputHandle(runHandle, 1);
-        Spf.SpfParameter output2 = Spf.getOutputHandle(runHandle, 2);
+        Spf.SpfCiphertextHash output0 = Spf.getOutputHandle(runHandle, 0);
+        Spf.SpfCiphertextHash output1 = Spf.getOutputHandle(runHandle, 1);
+        Spf.SpfCiphertextHash output2 = Spf.getOutputHandle(runHandle, 2);
 
         // Verify each output handle is unique
-        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output1));
-        assertTrue(Spf.SpfParameter.unwrap(output1) != Spf.SpfParameter.unwrap(output2));
-        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output2));
+        assertTrue(Spf.SpfCiphertextHash.unwrap(output0) != Spf.SpfCiphertextHash.unwrap(output1));
+        assertTrue(Spf.SpfCiphertextHash.unwrap(output1) != Spf.SpfCiphertextHash.unwrap(output2));
+        assertTrue(Spf.SpfCiphertextHash.unwrap(output0) != Spf.SpfCiphertextHash.unwrap(output2));
 
         // Verify the first output was requested for decryption
         vm.prank(THRESHOLD_DECRYPTION_SERVICE);
