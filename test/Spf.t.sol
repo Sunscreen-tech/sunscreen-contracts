@@ -32,6 +32,20 @@ contract SpfWrapper {
 }
 
 contract SpfTest is Test {
+    Spf.SpfLibrary constant SPF_LIBRARY =
+        Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
+    Spf.SpfProgram constant PROGRAM =
+        Spf.SpfProgram.wrap(0x70726f6772616d00000000000000000000000000000000000000000000000000);
+    Spf.SpfParameter constant PARAM_ZERO = Spf.SpfParameter.wrap(0);
+    Spf.SpfParameter constant PARAM_1 =
+        Spf.SpfParameter.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
+    Spf.SpfParameter constant PARAM_2 =
+        Spf.SpfParameter.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
+    Spf.SpfParameter constant PARAM_3 =
+        Spf.SpfParameter.wrap(0x8b797ec858caad3e954b722e257c88e21ce069b7ed28bb8d37dbf5927259e4b8);
+    Spf.SpfParameter constant PARAM_4 =
+        Spf.SpfParameter.wrap(0xe09312d4fba52955d7aaffe9dcd224f7e69995a8226acb7422130cab2313be07);
+
     SpfWrapper public spfWrapper;
 
     // Event to test against
@@ -43,12 +57,9 @@ contract SpfTest is Test {
 
     function test_RequestSpf_EmitsEvent() public {
         // Prepare test data
-        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
-
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
-        inputs[1] = Spf.SpfParameter.wrap(bytes32(uint256(0x002222222222222222222222222222222222222222)));
+        inputs[0] = PARAM_1;
+        inputs[1] = PARAM_2;
 
         uint256 numOutputs = 2;
 
@@ -56,18 +67,18 @@ contract SpfTest is Test {
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](4);
         expectedParams[0] = inputs[0];
         expectedParams[1] = inputs[1];
-        expectedParams[2] = Spf.SpfParameter.wrap(bytes32(0));
-        expectedParams[3] = Spf.SpfParameter.wrap(bytes32(0));
+        expectedParams[2] = PARAM_ZERO;
+        expectedParams[3] = PARAM_ZERO;
 
         // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(spfLibrary, program, expectedParams);
+        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, PROGRAM, expectedParams);
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, false, true);
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(spfLibrary, program, inputs, numOutputs);
+        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
@@ -76,57 +87,48 @@ contract SpfTest is Test {
 
     function test_RequestSpf_RequireInputs() public {
         // Prepare test data
-        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
-
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](0);
         uint256 numOutputs = 2;
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No inputs provided");
-        spfWrapper.exposedRequestSpf(spfLibrary, program, inputs, numOutputs);
+        spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
     }
 
     function test_RequestSpf_RequireOutputs() public {
         // Prepare test data
-        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
-
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
+        inputs[0] = PARAM_1;
         uint256 numOutputs = 0;
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
-        spfWrapper.exposedRequestSpf(spfLibrary, program, inputs, numOutputs);
+        spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
     }
 
     function test_RequestSpf_ExtendedParameters() public {
         // Prepare test data
-        Spf.SpfLibrary spfLibrary = Spf.SpfLibrary.wrap(bytes32(uint256(0x0000abcdef1234567890abcdef1234567890abcdef)));
-        Spf.SpfProgram program = Spf.SpfProgram.wrap(bytes32(uint256(0x0000bcdef1234567890abcdef1234567890abcdef12)));
-
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = Spf.SpfParameter.wrap(bytes32(uint256(0x001111111111111111111111111111111111111111)));
+        inputs[0] = PARAM_1;
 
         uint256 numOutputs = 3;
 
         // Calculate expected extended parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](4);
         expectedParams[0] = inputs[0];
-        expectedParams[1] = Spf.SpfParameter.wrap(bytes32(0));
-        expectedParams[2] = Spf.SpfParameter.wrap(bytes32(0));
-        expectedParams[3] = Spf.SpfParameter.wrap(bytes32(0));
+        expectedParams[1] = PARAM_ZERO;
+        expectedParams[2] = PARAM_ZERO;
+        expectedParams[3] = PARAM_ZERO;
 
         // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(spfLibrary, program, expectedParams);
+        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, PROGRAM, expectedParams);
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, false, true);
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(spfLibrary, program, inputs, numOutputs);
+        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, PROGRAM, inputs, numOutputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
@@ -144,9 +146,9 @@ contract SpfTest is Test {
         Spf.SpfParameter output2 = spfWrapper.exposedGetOutputHandle(runHandle, 2);
 
         // Verify each output handle is unique
-        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output1));
-        assertTrue(Spf.SpfParameter.unwrap(output1) != Spf.SpfParameter.unwrap(output2));
-        assertTrue(Spf.SpfParameter.unwrap(output0) != Spf.SpfParameter.unwrap(output2));
+        assertNotEq(Spf.SpfParameter.unwrap(output0), Spf.SpfParameter.unwrap(output1));
+        assertNotEq(Spf.SpfParameter.unwrap(output1), Spf.SpfParameter.unwrap(output2));
+        assertNotEq(Spf.SpfParameter.unwrap(output0), Spf.SpfParameter.unwrap(output2));
 
         // Verify deterministic output - same input parameters should result in same output handles
         Spf.SpfParameter output0Again = spfWrapper.exposedGetOutputHandle(runHandle, 0);
@@ -185,17 +187,13 @@ contract SpfTest is Test {
     function test_outputHash() public pure {
         // Create sample input parameters
         Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](4);
-        parameters[0] = Spf.SpfParameter.wrap(bytes32(uint256(1)));
-        parameters[1] = Spf.SpfParameter.wrap(bytes32(uint256(2)));
-        parameters[2] = Spf.SpfParameter.wrap(bytes32(uint256(3)));
-        parameters[3] = Spf.SpfParameter.wrap(bytes32(uint256(0)));
+        parameters[0] = PARAM_1;
+        parameters[1] = PARAM_2;
+        parameters[2] = PARAM_3;
+        parameters[3] = PARAM_4;
 
         // Create SpfRun struct
-        Spf.SpfRun memory run = Spf.SpfRun({
-            spfLibrary: Spf.SpfLibrary.wrap(bytes32(uint256(123))),
-            program: Spf.SpfProgram.wrap(bytes32("hello")),
-            parameters: parameters
-        });
+        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: parameters});
 
         // Calculate the hash using the library function
         bytes32 calculatedHash = Spf.outputHash(run);
@@ -214,11 +212,7 @@ contract SpfTest is Test {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
-        Spf.SpfRun memory run = Spf.SpfRun({
-            spfLibrary: Spf.SpfLibrary.wrap(bytes32(uint256(999))),
-            program: Spf.SpfProgram.wrap(bytes32(uint256(888))),
-            parameters: emptyParams
-        });
+        Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: emptyParams});
 
         // Calculate the hash using the library function
         bytes32 calculatedHash = Spf.outputHash(run);
@@ -233,23 +227,15 @@ contract SpfTest is Test {
     function test_outputHashDifferentInputsDifferentHashes() public pure {
         // Create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](1);
-        params1[0] = Spf.SpfParameter.wrap(bytes32(uint256(42)));
+        params1[0] = PARAM_1;
 
-        Spf.SpfRun memory run1 = Spf.SpfRun({
-            spfLibrary: Spf.SpfLibrary.wrap(bytes32(uint256(111))),
-            program: Spf.SpfProgram.wrap(bytes32(uint256(222))),
-            parameters: params1
-        });
+        Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: params1});
 
         // Create second SpfRun struct with slightly different parameters
         Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](1);
-        params2[0] = Spf.SpfParameter.wrap(bytes32(uint256(43))); // Different value
+        params2[0] = PARAM_2; // Different value
 
-        Spf.SpfRun memory run2 = Spf.SpfRun({
-            spfLibrary: Spf.SpfLibrary.wrap(bytes32(uint256(111))),
-            program: Spf.SpfProgram.wrap(bytes32(uint256(222))),
-            parameters: params2
-        });
+        Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: PROGRAM, parameters: params2});
 
         // Get hashes for both runs
         bytes32 hash1 = Spf.outputHash(run1);
