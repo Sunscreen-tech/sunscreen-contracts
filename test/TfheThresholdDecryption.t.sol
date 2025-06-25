@@ -5,6 +5,19 @@ import "forge-std/Test.sol";
 import "../contracts/TfheThresholdDecryption.sol";
 import "../contracts/Spf.sol";
 
+// Create a test contract that exposes the Spf library functions
+contract SpfWrapper {
+    using Spf for *;
+
+    function exposedCreateCiphertextParam(bytes32 hash) external pure returns (Spf.SpfParameter memory) {
+        return Spf.createCiphertextParam(hash);
+    }
+
+    function exposedCreateOutputCiphertextArrayParam(uint8 numBytes) external pure returns (Spf.SpfParameter memory) {
+        return Spf.createOutputCiphertextArrayParam(numBytes);
+    }
+}
+
 // Mock contract that inherits from TfheThresholdDecryption
 contract MockDecryptionUser is TfheThresholdDecryption {
     using Spf for *;
@@ -23,10 +36,7 @@ contract MockDecryptionUser is TfheThresholdDecryption {
     }
 
     // Function to execute an SPF program and request decryption of its output
-    function executeAndRequestDecryption(Spf.SpfParamDescription[] calldata inputs)
-        external
-        returns (Spf.SpfRunHandle)
-    {
+    function executeAndRequestDecryption(Spf.SpfParameter[] calldata inputs) external returns (Spf.SpfRunHandle) {
         // Run the SPF program
         Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs);
 
@@ -62,65 +72,45 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
     Spf.SpfProgram constant PROGRAM =
         Spf.SpfProgram.wrap(0x70726F6772616D00000000000000000000000000000000000000000000000000);
-    Spf.SpfParameter constant PARAM_ZERO = Spf.SpfParameter.wrap(0);
-    Spf.SpfCiphertextHash constant PARAM_1 =
-        Spf.SpfCiphertextHash.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
-    Spf.SpfCiphertextHash constant PARAM_2 =
-        Spf.SpfCiphertextHash.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
+    bytes32 constant PARAM_1 = 0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c;
+    bytes32 constant PARAM_2 = 0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525;
+
+    SpfWrapper public spfWrapper;
 
     // Test contract instances
     MockDecryptionUser public mockUser;
 
     // Events to test against
     event RequestThresholdDecryption(
-        address indexed sender, address contractAddress, bytes4 callbackSelector, Spf.SpfCiphertextHash param
+        address indexed sender, address contractAddress, bytes4 callbackSelector, Spf.SpfCiphertextHash outputHandle
     );
 
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
 
     function setUp() public {
+        spfWrapper = new SpfWrapper();
+
         // Deploy the mock user contract
         mockUser = new MockDecryptionUser(SPF_LIBRARY, PROGRAM);
     }
 
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
-        Spf.SpfCiphertextHash[][] memory hashes = new Spf.SpfCiphertextHash[][](2);
-        hashes[0] = new Spf.SpfCiphertextHash[](1);
-        hashes[0][0] = PARAM_1;
-        hashes[1] = new Spf.SpfCiphertextHash[](1);
-        hashes[1][0] = PARAM_2;
-
-        Spf.SpfParamDescription[] memory inputs = new Spf.SpfParamDescription[](3);
-        inputs[0] = Spf.SpfParamDescription({
-            param_type: Spf.SpfParamType.Ciphertext,
-            meta_data: 0,
-            ciphertexts: hashes[0],
-            plaintexts: new Spf.SpfPlaintext[](0)
-        });
-        inputs[1] = Spf.SpfParamDescription({
-            param_type: Spf.SpfParamType.Ciphertext,
-            meta_data: 0,
-            ciphertexts: hashes[1],
-            plaintexts: new Spf.SpfPlaintext[](0)
-        });
-        inputs[2] = Spf.SpfParamDescription({
-            param_type: Spf.SpfParamType.OutputCiphertextArray,
-            meta_data: 4,
-            ciphertexts: new Spf.SpfCiphertextHash[](0),
-            plaintexts: new Spf.SpfPlaintext[](0)
-        });
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
+        inputs[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
+        inputs[1] = spfWrapper.exposedCreateCiphertextParam(PARAM_2);
+        inputs[2] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
 
         // Expect RunProgramOnSpf event
         vm.expectEmit(true, true, false, true);
 
         // Calculate expected parameters
-        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](5);
-        expectedParams[0] = PARAM_ZERO;
-        expectedParams[1] = Spf.SpfParameter.wrap(Spf.SpfCiphertextHash.unwrap(hashes[0][0]));
-        expectedParams[2] = PARAM_ZERO;
-        expectedParams[3] = Spf.SpfParameter.wrap(Spf.SpfCiphertextHash.unwrap(hashes[1][0]));
-        expectedParams[4] = Spf.SpfParameter.wrap(0x0204000000000000000000000000000000000000000000000000000000000000);
+        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
+        expectedParams[0] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
+        expectedParams[0].payload[0] = PARAM_1;
+        expectedParams[1] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
+        expectedParams[1].payload[0] = PARAM_2;
+        expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
 
         // Create expected SpfRun
         Spf.SpfRun memory expectedRun =
@@ -172,22 +162,9 @@ contract TfheThresholdDecryptionTest is Test {
 
     function test_MultipleOutputs() public {
         // Create test input parameters
-        Spf.SpfCiphertextHash[] memory hashes = new Spf.SpfCiphertextHash[](1);
-        hashes[0] = PARAM_1;
-
-        Spf.SpfParamDescription[] memory inputs = new Spf.SpfParamDescription[](2);
-        inputs[0] = Spf.SpfParamDescription({
-            param_type: Spf.SpfParamType.Ciphertext,
-            meta_data: 0,
-            ciphertexts: hashes,
-            plaintexts: new Spf.SpfPlaintext[](0)
-        });
-        inputs[1] = Spf.SpfParamDescription({
-            param_type: Spf.SpfParamType.OutputCiphertextArray,
-            meta_data: 12,
-            ciphertexts: new Spf.SpfCiphertextHash[](0),
-            plaintexts: new Spf.SpfPlaintext[](0)
-        });
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
+        inputs[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
+        inputs[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(12);
 
         // Execute the function
         Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);

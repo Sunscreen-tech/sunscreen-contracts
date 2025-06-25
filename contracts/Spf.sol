@@ -5,9 +5,7 @@ pragma solidity ^0.8.0;
 library Spf {
     type SpfLibrary is bytes32;
     type SpfProgram is bytes32;
-    type SpfParameter is bytes32;
     type SpfCiphertextHash is bytes32;
-    type SpfPlaintext is uint128;
     type SpfRunHandle is bytes32;
 
     enum SpfParamType {
@@ -18,20 +16,9 @@ library Spf {
         PlaintextArray
     }
 
-    struct SpfParamDescription {
-        SpfParamType param_type;
-        // this field has no meaning if `param_type` is `Ciphertext` or `CiphertextArray`
-        // this field means the number of bytes in the output if `param_type` is `OutputCiphertextArray`
-        // this field means the bit width of the plaintext if `param_type` is `Plaintext` or `PlaintextArray`
-        uint8 meta_data;
-        // this field has no meaning if `param_type` is `OutputCiphertextArray` or `Plaintext` or `PlaintextArray`
-        // this field contains the ciphertext has if if `param_type` is `Ciphertext` or `CiphertextArray`
-        // in the former case, this field should contain only one ciphertext hash
-        SpfCiphertextHash[] ciphertexts;
-        // this field has no meaning if `param_type` is `OutputCiphertextArray` or `Ciphertext` or `CiphertextArray`
-        // this field contains the ciphertext has if if `param_type` is `Plaintext` or `PlaintextArray`
-        // in the former case, this field should contain only one plaintext
-        SpfPlaintext[] plaintexts;
+    struct SpfParameter {
+        uint256 metaData;
+        bytes32[] payload;
     }
 
     struct SpfRun {
@@ -42,81 +29,80 @@ library Spf {
 
     event RunProgramOnSpf(address indexed sender, SpfRun run);
 
+    function createCiphertextParam(bytes32 hash) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParamType.Ciphertext);
+        metaData <<= 248;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = hash;
+        return SpfParameter({metaData: metaData, payload: payload});
+    }
+
+    function createCiphertextArrayParam(bytes32[] memory hashes) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParamType.CiphertextArray);
+        metaData <<= 248;
+        return SpfParameter({metaData: metaData, payload: hashes});
+    }
+
+    function createOutputCiphertextArrayParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
+        metaData <<= 8;
+        metaData += numBytes;
+        metaData <<= 240;
+        return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
+    }
+
+    function createPlaintextParam(uint8 bitWidth, uint128 value) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParamType.Plaintext);
+        metaData <<= 8;
+        metaData += bitWidth;
+        metaData <<= 128;
+        metaData += value;
+        metaData <<= 112;
+        return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
+    }
+
+    function createPlaintextArrayParam(uint8 bitWidth, uint128[] memory values)
+        internal
+        pure
+        returns (SpfParameter memory)
+    {
+        uint256 metaData = uint8(SpfParamType.PlaintextArray);
+        metaData <<= 8;
+        metaData += bitWidth;
+        metaData <<= 240;
+        bytes32[] memory payload = new bytes32[](values.length);
+        for (uint256 i = 0; i < values.length; i++) {
+            payload[i] = bytes16(values[i]);
+        }
+        return SpfParameter({metaData: metaData, payload: payload});
+    }
+
     function outputHash(SpfRun memory run) internal pure returns (bytes32) {
         return keccak256(abi.encode(run));
     }
 
-    function requestSpf(SpfLibrary spfLibrary, SpfProgram program, SpfParamDescription[] memory inputs)
+    function requestSpf(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
         internal
         returns (SpfRunHandle)
     {
         // Require at least one input
         require(inputs.length > 0, "SPF: No inputs provided");
 
-        // Figure out the extra length needed for parameter array
-        // By the way make sure we have output
-        uint256 extraLen = 0;
+        // Make sure we have output
         bool foundOutput = false;
         for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i].param_type == SpfParamType.Ciphertext) {
-                extraLen += 1;
-            } else if (inputs[i].param_type == SpfParamType.CiphertextArray) {
-                extraLen += inputs[i].ciphertexts.length;
+            SpfParamType paramType = SpfParamType(inputs[i].metaData >> 248);
+            if (
+                paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray
+                    || paramType == SpfParamType.PlaintextArray
+            ) {
                 foundOutput = true;
-            } else if (inputs[i].param_type == SpfParamType.PlaintextArray) {
-                extraLen += inputs[i].plaintexts.length;
-                foundOutput = true;
-            } else if (inputs[i].param_type == SpfParamType.OutputCiphertextArray) {
-                foundOutput = true;
+                break;
             }
         }
         require(foundOutput, "SPF: No outputs requested");
 
-        SpfParameter[] memory parameters = new SpfParameter[](inputs.length + extraLen);
-
-        uint256 index = 0;
-        for (uint256 i = 0; i < inputs.length; i++) {
-            if (inputs[i].param_type == SpfParamType.Ciphertext) {
-                parameters[index] = SpfParameter.wrap(0);
-                index += 1;
-                parameters[index] = SpfParameter.wrap(SpfCiphertextHash.unwrap(inputs[i].ciphertexts[0]));
-                index += 1;
-            } else if (inputs[i].param_type == SpfParamType.CiphertextArray) {
-                bytes32 control_data = bytes1(uint8(1));
-                bytes32 size = bytes1(uint8(inputs[i].ciphertexts.length));
-                control_data |= size >> 8;
-                parameters[index] = SpfParameter.wrap(control_data);
-                index += 1;
-                for (uint256 j = 0; j < inputs[i].ciphertexts.length; j++) {
-                    parameters[index] = SpfParameter.wrap(SpfCiphertextHash.unwrap(inputs[i].ciphertexts[j]));
-                    index += 1;
-                }
-            } else if (inputs[i].param_type == SpfParamType.OutputCiphertextArray) {
-                bytes32 control_data = bytes1(uint8(2));
-                control_data |= bytes32(bytes1(inputs[i].meta_data)) >> 8;
-                parameters[index] = SpfParameter.wrap(control_data);
-                index += 1;
-            } else if (inputs[i].param_type == SpfParamType.Plaintext) {
-                bytes32 control_data = bytes1(uint8(3));
-                control_data |= bytes32(bytes1(inputs[i].meta_data)) >> 8;
-                control_data |= bytes32(bytes16(SpfPlaintext.unwrap(inputs[i].plaintexts[0]))) >> 16;
-                parameters[index] = SpfParameter.wrap(control_data);
-                index += 1;
-            } else {
-                bytes32 control_data = bytes1(uint8(4));
-                control_data |= bytes32(bytes1(inputs[i].meta_data)) >> 8;
-                control_data |= bytes32(bytes1(uint8(inputs[i].plaintexts.length))) >> 16;
-                parameters[index] = SpfParameter.wrap(control_data);
-                index += 1;
-                for (uint256 j = 0; j < inputs[i].plaintexts.length; j++) {
-                    bytes32 val = bytes16(SpfPlaintext.unwrap(inputs[i].plaintexts[j]));
-                    parameters[index] = SpfParameter.wrap(val);
-                    index += 1;
-                }
-            }
-        }
-
-        SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: parameters});
+        SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: inputs});
 
         // Get hash of this struct
         bytes32 runHash = outputHash(run);
