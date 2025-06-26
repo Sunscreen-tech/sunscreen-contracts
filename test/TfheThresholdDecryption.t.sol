@@ -9,8 +9,12 @@ import "../contracts/Spf.sol";
 contract SpfWrapper {
     using Spf for *;
 
-    function exposedCreateCiphertextParam(bytes32 hash) external pure returns (Spf.SpfParameter memory) {
-        return Spf.createCiphertextParam(hash);
+    function exposedCreateCiphertextParam(Spf.SpfCiphertextIdentifier identifier)
+        external
+        pure
+        returns (Spf.SpfParameter memory)
+    {
+        return Spf.createCiphertextParam(identifier);
     }
 
     function exposedCreateOutputCiphertextArrayParam(uint8 numBytes) external pure returns (Spf.SpfParameter memory) {
@@ -74,8 +78,10 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
     Spf.SpfProgram constant PROGRAM =
         Spf.SpfProgram.wrap(0x70726F6772616D00000000000000000000000000000000000000000000000000);
-    bytes32 constant PARAM_1 = 0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c;
-    bytes32 constant PARAM_2 = 0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525;
+    Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_1 =
+        Spf.SpfCiphertextIdentifier.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
+    Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_2 =
+        Spf.SpfCiphertextIdentifier.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
 
     SpfWrapper public spfWrapper;
 
@@ -102,8 +108,8 @@ contract TfheThresholdDecryptionTest is Test {
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
-        inputs[1] = spfWrapper.exposedCreateCiphertextParam(PARAM_2);
+        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
+        inputs[1] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_2);
         inputs[2] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
 
         // Expect RunProgramOnSpf event
@@ -112,9 +118,9 @@ contract TfheThresholdDecryptionTest is Test {
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
         expectedParams[0] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
-        expectedParams[0].payload[0] = PARAM_1;
+        expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_1);
         expectedParams[1] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
-        expectedParams[1].payload[0] = PARAM_2;
+        expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_2);
         expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
 
         // Create expected SpfRun
@@ -168,7 +174,7 @@ contract TfheThresholdDecryptionTest is Test {
     function test_MultipleOutputs() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
+        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
         inputs[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(12);
 
         // Execute the function
