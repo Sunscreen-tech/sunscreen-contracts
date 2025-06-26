@@ -66,6 +66,7 @@ contract SpfWrapper {
 }
 
 contract SpfTest is Test {
+    // Constants for testing only, no real life meaning
     Spf.SpfLibrary constant SPF_LIBRARY =
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
     Spf.SpfProgram constant SPF_PROGRAM =
@@ -234,11 +235,12 @@ contract SpfTest is Test {
 
     function test_outputHash() public view {
         // Create sample input parameters
-        Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](4);
+        Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](5);
         parameters[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
         parameters[1] = spfWrapper.exposedCreateCiphertextParam(PARAM_2);
         parameters[2] = spfWrapper.exposedCreateCiphertextParam(PARAM_3);
         parameters[3] = spfWrapper.exposedCreateCiphertextParam(PARAM_4);
+        parameters[4] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
 
         // Create SpfRun struct
         Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: parameters});
@@ -260,6 +262,7 @@ contract SpfTest is Test {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
+        // This won't be able to actually run due to number of inputs check, just for testing
         Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: emptyParams});
 
         // Calculate the hash using the library function
@@ -274,14 +277,16 @@ contract SpfTest is Test {
 
     function test_outputHashDifferentInputsDifferentHashes() public view {
         // Create first SpfRun struct
-        Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](1);
+        Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
         params1[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_1);
+        params1[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
 
         Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params1});
 
         // Create second SpfRun struct with slightly different parameters
-        Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](1);
+        Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](2);
         params2[0] = spfWrapper.exposedCreateCiphertextParam(PARAM_2); // Different value
+        params2[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
 
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params2});
 

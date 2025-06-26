@@ -67,7 +67,7 @@ contract MockDecryptionUser is TfheThresholdDecryption {
 contract TfheThresholdDecryptionTest is Test {
     using Spf for *;
 
-    // Constants for testing
+    // Constants for testing only, no real life meaning
     address constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
     uint256 constant DECRYPTED_VALUE = 123;
     Spf.SpfLibrary constant SPF_LIBRARY =
