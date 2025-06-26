@@ -61,27 +61,35 @@ library Spf {
 
     // Create a parameter that corresponds to a single ciphertext
     //
-    // identifier: the ciphertext identifier obtained through uploading ciphertext to SPF service
-    function createCiphertextParam(bytes32 identifier) internal pure returns (SpfParameter memory) {
+    // identifier: the ciphertext identifier obtained through uploading to SPF service or running a program
+    function createCiphertextParam(SpfCiphertextIdentifier identifier) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParamType.Ciphertext);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
-        payload[0] = identifier;
+        payload[0] = SpfCiphertextIdentifier.unwrap(identifier);
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
     // Create a parameter that corresponds to a ciphertext array
     //
-    // identifier: the ciphertext identifiers obtained through uploading ciphertexts to SPF service in an array
-    function createCiphertextArrayParam(bytes32[] memory identifiers) internal pure returns (SpfParameter memory) {
+    // identifiers: array of ciphertext identifiers obtained through uploading to SPF service or running a program
+    function createCiphertextArrayParam(SpfCiphertextIdentifier[] memory identifiers)
+        internal
+        pure
+        returns (SpfParameter memory)
+    {
         uint256 metaData = uint8(SpfParamType.CiphertextArray);
         metaData <<= 248;
-        return SpfParameter({metaData: metaData, payload: identifiers});
+        bytes32[] memory payload;
+        assembly {
+            payload := identifiers
+        }
+        return SpfParameter({metaData: metaData, payload: payload});
     }
 
     // Create a parameter that corresponds to an output ciphertext array
     //
-    // identifier: the number of bytes in this output array (not number of elements as we do not know the size of each element)
+    // numBytes: the number of bytes in this output array (not number of elements as we do not know the size of each element)
     function createOutputCiphertextArrayParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
         metaData <<= 8;
