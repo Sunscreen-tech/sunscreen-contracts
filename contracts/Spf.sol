@@ -59,6 +59,26 @@ library Spf {
 
     event RunProgramOnSpf(address indexed sender, SpfRun run);
 
+    // Trivial encryption has no security so by using the ciphertext identifiers below
+    // everyone knows the data you are using, we provide just 0 and 1 here
+    SpfCiphertextIdentifier constant TRIVIAL_ZERO_8_BIT =
+        SpfCiphertextIdentifier.wrap(0x0ba77c8f6b3c744f64b85a0bb205ddb1aa53c5f8d5a68c04141c91e2afc9ebae);
+    SpfCiphertextIdentifier constant TRIVIAL_ZERO_16_BIT =
+        SpfCiphertextIdentifier.wrap(0x49b72fb6643ea599ea1fd3bcfa81260e40983ee185e67271e49cb76beeb998dc);
+    SpfCiphertextIdentifier constant TRIVIAL_ZERO_32_BIT =
+        SpfCiphertextIdentifier.wrap(0x297dabf2fbad4b6577e45722d3e1bf92c682388aaacefbadd834511240a52c1d);
+    SpfCiphertextIdentifier constant TRIVIAL_ZERO_64_BIT =
+        SpfCiphertextIdentifier.wrap(0xb77f1b48164a4729f4a0a669e284d4abaa28e5e5891aa043effd52e5f2e9f3d1);
+
+    SpfCiphertextIdentifier constant TRIVIAL_ONE_8_BIT =
+        SpfCiphertextIdentifier.wrap(0x23de99e2dca5d26d8cf8f8caeb620e8d94fb417e54543127448befbf87dd3680);
+    SpfCiphertextIdentifier constant TRIVIAL_ONE_16_BIT =
+        SpfCiphertextIdentifier.wrap(0x4e27107de8cf8be7b48c3bc32f85739e2d8141eebd4e8144c722772530fb3054);
+    SpfCiphertextIdentifier constant TRIVIAL_ONE_32_BIT =
+        SpfCiphertextIdentifier.wrap(0x1d833c57b9b3129ce94c091b863f6021ca7cc83f4b985bf4f6ddb0165eb27c6e);
+    SpfCiphertextIdentifier constant TRIVIAL_ONE_64_BIT =
+        SpfCiphertextIdentifier.wrap(0x0d7e18449071e3683ef83b234781f2657ef8f840974d7f8c8e1101d997fbcb8f);
+
     // Create a parameter that corresponds to a single ciphertext
     //
     // identifier: the ciphertext identifier obtained through uploading to SPF service or running a program
