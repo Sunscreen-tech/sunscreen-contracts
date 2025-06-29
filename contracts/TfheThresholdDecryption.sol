@@ -9,6 +9,10 @@ contract TfheThresholdDecryption {
         address indexed sender, address contractAddress, bytes4 callbackSelector, bytes32 param
     );
 
+    /// Request the threshold decryption of a given parameter.
+    ///
+    /// @param callbackSelector The selector of the callback function to handle the decryption result.
+    /// @param param The parameter to be decrypted.
     function requestThresholdDecryption(bytes4 callbackSelector, Spf.SpfParameter memory param) internal {
         emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param.payload[0]);
     }
