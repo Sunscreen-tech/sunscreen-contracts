@@ -5,23 +5,6 @@ import "forge-std/Test.sol";
 import "../contracts/TfheThresholdDecryption.sol";
 import "../contracts/Spf.sol";
 
-// Create a test contract that exposes the Spf library functions
-contract SpfWrapper {
-    using Spf for *;
-
-    function exposedCreateCiphertextParam(Spf.SpfCiphertextIdentifier identifier)
-        external
-        pure
-        returns (Spf.SpfParameter memory)
-    {
-        return Spf.createCiphertextParam(identifier);
-    }
-
-    function exposedCreateOutputCiphertextArrayParam(uint8 numBytes) external pure returns (Spf.SpfParameter memory) {
-        return Spf.createOutputCiphertextArrayParam(numBytes);
-    }
-}
-
 // Mock contract that inherits from TfheThresholdDecryption
 contract MockDecryptionUser is TfheThresholdDecryption {
     using Spf for *;
@@ -81,8 +64,6 @@ contract TfheThresholdDecryptionTest is Test {
     Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_2 =
         Spf.SpfCiphertextIdentifier.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
 
-    SpfWrapper public spfWrapper;
-
     // Test contract instances
     MockDecryptionUser public mockUser;
 
@@ -97,8 +78,6 @@ contract TfheThresholdDecryptionTest is Test {
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
 
     function setUp() public {
-        spfWrapper = new SpfWrapper();
-
         // Deploy the mock user contract
         mockUser = new MockDecryptionUser(SPF_LIBRARY, PROGRAM);
     }
@@ -106,12 +85,12 @@ contract TfheThresholdDecryptionTest is Test {
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_2);
-        inputs[2] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
+        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
+        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
 
         // Expect RunProgramOnSpf event
-        vm.expectEmit(true, true, false, true);
+        vm.expectEmit(true, true, true, true);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
@@ -175,8 +154,8 @@ contract TfheThresholdDecryptionTest is Test {
     function test_MultipleOutputs() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(12);
+        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createOutputCiphertextArrayParameter(12);
 
         // Execute the function
         Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);

@@ -31,9 +31,9 @@ contract SpfTest is Test {
     function test_RequestSpf_EmitsEvent() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextParam(CIPHERTEXT_ID_2);
-        inputs[2] = Spf.createOutputCiphertextArrayParam(4);
+        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
+        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
@@ -75,7 +75,7 @@ contract SpfTest is Test {
     function test_RequestSpf_RequireOutputs() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
+        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
@@ -95,11 +95,11 @@ contract SpfTest is Test {
         values[2] = 4;
 
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](5);
-        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextArrayParam(identifiers);
-        inputs[2] = Spf.createOutputCiphertextArrayParam(4);
-        inputs[3] = Spf.createPlaintextParam(32, 1);
-        inputs[4] = Spf.createPlaintextArrayParam(32, values);
+        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextArrayParameter(identifiers);
+        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
+        inputs[3] = Spf.createPlaintextParameter(32, 1);
+        inputs[4] = Spf.createPlaintextArrayParameter(32, values);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](5);
@@ -178,11 +178,11 @@ contract SpfTest is Test {
     function test_outputHash() public pure {
         // create sample input parameters
         Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](5);
-        parameters[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
-        parameters[1] = Spf.createCiphertextParam(CIPHERTEXT_ID_2);
-        parameters[2] = Spf.createCiphertextParam(CIPHERTEXT_ID_3);
-        parameters[3] = Spf.createCiphertextParam(CIPHERTEXT_ID_4);
-        parameters[4] = Spf.createOutputCiphertextArrayParam(4);
+        parameters[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        parameters[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
+        parameters[2] = Spf.createCiphertextParameter(CIPHERTEXT_ID_3);
+        parameters[3] = Spf.createCiphertextParameter(CIPHERTEXT_ID_4);
+        parameters[4] = Spf.createOutputCiphertextArrayParameter(4);
 
         // create SpfRun struct
         Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: parameters});
@@ -220,15 +220,15 @@ contract SpfTest is Test {
     function test_outputHashDifferentInputsDifferentHashes() public pure {
         // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
-        params1[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
-        params1[1] = Spf.createOutputCiphertextArrayParam(4);
+        params1[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        params1[1] = Spf.createOutputCiphertextArrayParameter(4);
 
         Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params1});
 
         // create second SpfRun struct with slightly different parameters
         Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](2);
-        params2[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_2); // Different value
-        params2[1] = Spf.createOutputCiphertextArrayParam(4);
+        params2[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2); // Different value
+        params2[1] = Spf.createOutputCiphertextArrayParameter(4);
 
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params2});
 

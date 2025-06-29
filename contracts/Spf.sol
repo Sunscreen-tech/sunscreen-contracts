@@ -8,7 +8,7 @@ library Spf {
     type SpfCiphertextIdentifier is bytes32;
     type SpfRunHandle is bytes32;
 
-    enum SpfParamType {
+    enum SpfParameterType {
         // Indicates the parameter is a single "pass by value" ciphertext
         //
         // e.g. `[[clang::encrypted]] uint16_t val`
@@ -95,12 +95,46 @@ library Spf {
     SpfCiphertextIdentifier constant TRIVIAL_ONE_64_BIT =
         SpfCiphertextIdentifier.wrap(0x0d7e18449071e3683ef83b234781f2657ef8f840974d7f8c8e1101d997fbcb8f);
 
+    /// Create a trivial zero ciphertext for the specified bit width.
+    function createTrivialZeroCiphertextParameter(uint8 bitWidth) internal pure returns (SpfParameter memory) {
+        if (bitWidth == 8) {
+            return createCiphertextParameter(TRIVIAL_ZERO_8_BIT);
+        } else if (bitWidth == 16) {
+            return createCiphertextParameter(TRIVIAL_ZERO_16_BIT);
+        } else if (bitWidth == 32) {
+            return createCiphertextParameter(TRIVIAL_ZERO_32_BIT);
+        } else if (bitWidth == 64) {
+            return createCiphertextParameter(TRIVIAL_ZERO_64_BIT);
+        } else {
+            revert("Unsupported bit width for trivial zero ciphertext");
+        }
+    }
+
+    /// Create a trivial one ciphertext for the specified bit width.
+    function createTrivialOneCiphertextParameter(uint8 bitWidth) internal pure returns (SpfParameter memory) {
+        if (bitWidth == 8) {
+            return createCiphertextParameter(TRIVIAL_ONE_8_BIT);
+        } else if (bitWidth == 16) {
+            return createCiphertextParameter(TRIVIAL_ONE_16_BIT);
+        } else if (bitWidth == 32) {
+            return createCiphertextParameter(TRIVIAL_ONE_32_BIT);
+        } else if (bitWidth == 64) {
+            return createCiphertextParameter(TRIVIAL_ONE_64_BIT);
+        } else {
+            revert("Unsupported bit width for trivial one ciphertext");
+        }
+    }
+
     /// Create a parameter that corresponds to a single ciphertext.
     ///
     /// @param identifier The ciphertext identifier
     /// @return SpfParameter A parameter that corresponds to a single ciphertext
-    function createCiphertextParam(SpfCiphertextIdentifier identifier) internal pure returns (SpfParameter memory) {
-        uint256 metaData = uint8(SpfParamType.Ciphertext);
+    function createCiphertextParameter(SpfCiphertextIdentifier identifier)
+        internal
+        pure
+        returns (SpfParameter memory)
+    {
+        uint256 metaData = uint8(SpfParameterType.Ciphertext);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = SpfCiphertextIdentifier.unwrap(identifier);
@@ -111,12 +145,12 @@ library Spf {
     ///
     /// @param identifiers array of ciphertext identifiers
     /// @return SpfParameter A parameter that corresponds to a ciphertext array
-    function createCiphertextArrayParam(SpfCiphertextIdentifier[] memory identifiers)
+    function createCiphertextArrayParameter(SpfCiphertextIdentifier[] memory identifiers)
         internal
         pure
         returns (SpfParameter memory)
     {
-        uint256 metaData = uint8(SpfParamType.CiphertextArray);
+        uint256 metaData = uint8(SpfParameterType.CiphertextArray);
         metaData <<= 248;
         bytes32[] memory payload;
         assembly {
@@ -129,8 +163,8 @@ library Spf {
     ///
     /// @param numBytes The number of bytes in this output ciphertext
     /// @return SpfParameter A parameter that corresponds to an output ciphertext
-    function createOutputCiphertextParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
-        uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
+    function createOutputCiphertextParameter(uint8 numBytes) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParameterType.OutputCiphertextArray);
         metaData <<= 8;
         metaData += numBytes;
         metaData <<= 240;
@@ -141,8 +175,8 @@ library Spf {
     ///
     /// @param numBytes The number of bytes in each element of this output ciphertext array
     /// @return SpfParameter A parameter that corresponds to an output ciphertext array
-    function createOutputCiphertextArrayParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
-        uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
+    function createOutputCiphertextArrayParameter(uint8 numBytes) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParameterType.OutputCiphertextArray);
         metaData <<= 8;
         metaData += numBytes;
         metaData <<= 240;
@@ -154,8 +188,8 @@ library Spf {
     /// @param bitWidth The bit width of the plaintext.
     /// @param value The plaintext value
     /// @return SpfParameter A parameter that corresponds to a single plaintext
-    function createPlaintextParam(uint8 bitWidth, uint256 value) internal pure returns (SpfParameter memory) {
-        uint256 metaData = uint8(SpfParamType.Plaintext);
+    function createPlaintextParameter(uint8 bitWidth, uint256 value) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParameterType.Plaintext);
         metaData <<= 8;
         metaData += bitWidth;
         metaData <<= 240;
@@ -169,12 +203,12 @@ library Spf {
     /// @param bitWidth: the bit width of the plaintext values
     /// @param values: the plaintext values
     /// @return SpfParameter A parameter that corresponds to a plaintext array
-    function createPlaintextArrayParam(uint8 bitWidth, uint256[] memory values)
+    function createPlaintextArrayParameter(uint8 bitWidth, uint256[] memory values)
         internal
         pure
         returns (SpfParameter memory)
     {
-        uint256 metaData = uint8(SpfParamType.PlaintextArray);
+        uint256 metaData = uint8(SpfParameterType.PlaintextArray);
         metaData <<= 8;
         metaData += bitWidth;
         metaData <<= 240;
@@ -221,8 +255,8 @@ library Spf {
         // Make sure we have output, note ciphertext and plaintext arrays can also be used as output
         bool foundOutput = false;
         for (uint256 i = 0; i < inputs.length; i++) {
-            SpfParamType paramType = SpfParamType(inputs[i].metaData >> 248);
-            if (paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray) {
+            SpfParameterType parameterType = SpfParameterType(inputs[i].metaData >> 248);
+            if (parameterType == SpfParameterType.OutputCiphertextArray) {
                 foundOutput = true;
                 break;
             }
@@ -250,6 +284,10 @@ library Spf {
         bytes32 outputHandle = keccak256(abi.encodePacked(runHandle, index));
         SpfCiphertextIdentifier identifier = SpfCiphertextIdentifier.wrap(outputHandle);
 
-        return createCiphertextParam(identifier);
+        return createCiphertextParameter(identifier);
+    }
+
+    function isUninitializedParameter(SpfParameter memory param) internal pure returns (bool) {
+        return param.metaData == 0 && param.payload.length == 0;
     }
 }
