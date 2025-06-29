@@ -222,10 +222,7 @@ library Spf {
         bool foundOutput = false;
         for (uint256 i = 0; i < inputs.length; i++) {
             SpfParamType paramType = SpfParamType(inputs[i].metaData >> 248);
-            if (
-                paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray
-                    || paramType == SpfParamType.PlaintextArray
-            ) {
+            if (paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray) {
                 foundOutput = true;
                 break;
             }
