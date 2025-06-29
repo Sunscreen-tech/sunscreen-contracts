@@ -45,12 +45,10 @@ contract MockDecryptionUser is TfheThresholdDecryption {
         Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs);
 
         // Get the zeroth output handle
-        Spf.SpfCiphertextIdentifier outputHandle = Spf.getOutputHandle(runHandle, 0);
+        Spf.SpfParameter memory outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestThresholdDecryption(
-            this.handleDecryptionResult.selector, Spf.SpfCiphertextIdentifier.unwrap(outputHandle)
-        );
+        requestThresholdDecryption(this.handleDecryptionResult.selector, outputHandle);
 
         return runHandle;
     }
@@ -134,10 +132,13 @@ contract TfheThresholdDecryptionTest is Test {
 
         // Calculate expected output handle
         Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(keccak256(abi.encode(expectedRun)));
-        Spf.SpfCiphertextIdentifier expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
+        Spf.SpfParameter memory expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit RequestThresholdDecryption(
-            address(this), address(mockUser), MockDecryptionUser.handleDecryptionResult.selector, expectedOutputHandle
+            address(this),
+            address(mockUser),
+            MockDecryptionUser.handleDecryptionResult.selector,
+            Spf.SpfCiphertextIdentifier.wrap(expectedOutputHandle.payload[0])
         );
 
         // Execute the function
@@ -181,9 +182,12 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);
 
         // Verify we can get all output handles
-        Spf.SpfCiphertextIdentifier output0 = Spf.getOutputHandle(runHandle, 0);
-        Spf.SpfCiphertextIdentifier output1 = Spf.getOutputHandle(runHandle, 1);
-        Spf.SpfCiphertextIdentifier output2 = Spf.getOutputHandle(runHandle, 2);
+        Spf.SpfCiphertextIdentifier output0 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(runHandle, 0).payload[0]);
+        Spf.SpfCiphertextIdentifier output1 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(runHandle, 1).payload[0]);
+        Spf.SpfCiphertextIdentifier output2 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(runHandle, 2).payload[0]);
 
         // Verify each output handle is unique
         assertTrue(Spf.SpfCiphertextIdentifier.unwrap(output0) != Spf.SpfCiphertextIdentifier.unwrap(output1));

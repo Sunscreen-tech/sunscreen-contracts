@@ -45,7 +45,8 @@ library Spf {
         PlaintextArray
     }
 
-    // Users should use the following `createXxxParam` functions to create parameters instead of handcrafting
+    // Users should use the following `createXxxParam` functions to create
+    // parameters instead of handcrafting
     struct SpfParameter {
         uint256 metaData;
         bytes32[] payload;
@@ -61,27 +62,43 @@ library Spf {
 
     // Trivial encryption has no security so by using the ciphertext identifiers below
     // everyone knows the data you are using, we provide just 0 and 1 here
+
+    /// Trivial ciphertext encoding the value 0 with 8 bits
     SpfCiphertextIdentifier constant TRIVIAL_ZERO_8_BIT =
         SpfCiphertextIdentifier.wrap(0x0ba77c8f6b3c744f64b85a0bb205ddb1aa53c5f8d5a68c04141c91e2afc9ebae);
+
+    /// Trivial ciphertext encoding the value 0 with 16 bits
     SpfCiphertextIdentifier constant TRIVIAL_ZERO_16_BIT =
         SpfCiphertextIdentifier.wrap(0x49b72fb6643ea599ea1fd3bcfa81260e40983ee185e67271e49cb76beeb998dc);
+
+    /// Trivial ciphertext encoding the value 0 with 32 bits
     SpfCiphertextIdentifier constant TRIVIAL_ZERO_32_BIT =
         SpfCiphertextIdentifier.wrap(0x297dabf2fbad4b6577e45722d3e1bf92c682388aaacefbadd834511240a52c1d);
+
+    /// Trivial ciphertext encoding the value 0 with 64 bits
     SpfCiphertextIdentifier constant TRIVIAL_ZERO_64_BIT =
         SpfCiphertextIdentifier.wrap(0xb77f1b48164a4729f4a0a669e284d4abaa28e5e5891aa043effd52e5f2e9f3d1);
 
+    /// Trivial ciphertext encoding the value 1 with 8 bits
     SpfCiphertextIdentifier constant TRIVIAL_ONE_8_BIT =
         SpfCiphertextIdentifier.wrap(0x23de99e2dca5d26d8cf8f8caeb620e8d94fb417e54543127448befbf87dd3680);
+
+    /// Trivial ciphertext encoding the value 1 with 16 bits
     SpfCiphertextIdentifier constant TRIVIAL_ONE_16_BIT =
         SpfCiphertextIdentifier.wrap(0x4e27107de8cf8be7b48c3bc32f85739e2d8141eebd4e8144c722772530fb3054);
+
+    /// Trivial ciphertext encoding the value 1 with 32 bits
     SpfCiphertextIdentifier constant TRIVIAL_ONE_32_BIT =
         SpfCiphertextIdentifier.wrap(0x1d833c57b9b3129ce94c091b863f6021ca7cc83f4b985bf4f6ddb0165eb27c6e);
+
+    /// Trivial ciphertext encoding the value 1 with 64 bits
     SpfCiphertextIdentifier constant TRIVIAL_ONE_64_BIT =
         SpfCiphertextIdentifier.wrap(0x0d7e18449071e3683ef83b234781f2657ef8f840974d7f8c8e1101d997fbcb8f);
 
-    // Create a parameter that corresponds to a single ciphertext
-    //
-    // identifier: the ciphertext identifier obtained through uploading to SPF service or running a program
+    /// Create a parameter that corresponds to a single ciphertext.
+    ///
+    /// @param identifier The ciphertext identifier
+    /// @return SpfParameter A parameter that corresponds to a single ciphertext
     function createCiphertextParam(SpfCiphertextIdentifier identifier) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParamType.Ciphertext);
         metaData <<= 248;
@@ -90,9 +107,10 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    // Create a parameter that corresponds to a ciphertext array
-    //
-    // identifiers: array of ciphertext identifiers obtained through uploading to SPF service or running a program
+    /// Create a parameter that corresponds to a ciphertext array.
+    ///
+    /// @param identifiers array of ciphertext identifiers
+    /// @return SpfParameter A parameter that corresponds to a ciphertext array
     function createCiphertextArrayParam(SpfCiphertextIdentifier[] memory identifiers)
         internal
         pure
@@ -107,9 +125,22 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    // Create a parameter that corresponds to an output ciphertext array
-    //
-    // numBytes: the number of bytes in this output array (not number of elements as we do not know the size of each element)
+    /// Create a parameter that corresponds to an output ciphertext
+    ///
+    /// @param numBytes The number of bytes in this output ciphertext
+    /// @return SpfParameter A parameter that corresponds to an output ciphertext
+    function createOutputCiphertextParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
+        uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
+        metaData <<= 8;
+        metaData += numBytes;
+        metaData <<= 240;
+        return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
+    }
+
+    /// Create a parameter that corresponds to an output ciphertext array
+    ///
+    /// @param numBytes The number of bytes in each element of this output ciphertext array
+    /// @return SpfParameter A parameter that corresponds to an output ciphertext array
     function createOutputCiphertextArrayParam(uint8 numBytes) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParamType.OutputCiphertextArray);
         metaData <<= 8;
@@ -118,10 +149,11 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
     }
 
-    // Create a parameter that corresponds to a single plaintext
-    //
-    // bitWidth: the bit width of this plaintext, up to 256 (0 means 256), note current backend only supports up to 128
-    // value: the plaintext value
+    /// Create a parameter that corresponds to a single plaintext.
+    ///
+    /// @param bitWidth The bit width of the plaintext.
+    /// @param value The plaintext value
+    /// @return SpfParameter A parameter that corresponds to a single plaintext
     function createPlaintextParam(uint8 bitWidth, uint256 value) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParamType.Plaintext);
         metaData <<= 8;
@@ -132,10 +164,11 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    // Create a parameter that corresponds to a plaintext array
-    //
-    // bitWidth: the bit width of all plaintexts in this array, up to 256 (0 means 256), note current backend only supports up to 128
-    // values: the plaintext values in an array
+    /// Create a parameter that corresponds to a plaintext array.
+    ///
+    /// @param bitWidth: the bit width of the plaintext values
+    /// @param values: the plaintext values
+    /// @return SpfParameter A parameter that corresponds to a plaintext array
     function createPlaintextArrayParam(uint8 bitWidth, uint256[] memory values)
         internal
         pure
@@ -152,10 +185,32 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
+    /// Create a parameter that corresponds to a plaintext array with a single value.
+    ///
+    /// @param run The SpfRun struct containing the program and parameters
+    /// @return bytes32 The identifier for a specific run of the SPF program
     function outputHash(SpfRun memory run) internal pure returns (bytes32) {
         return keccak256(abi.encode(run));
     }
 
+    /// Requests execution of a Secure Processing Facility (SPF) program with
+    /// the provided parameters.
+    ///
+    /// @dev This function emits a RunProgramOnSpf event that triggers execution
+    ///      of the specified program by an off-chain SPF service. The function
+    ///      validates that at least one input is provided and that there is
+    ///      at least one parameter that can be used for output.
+    ///
+    /// @param spfLibrary The identifier of the SPF library containing the
+    ///        program to be executed.
+    /// @param program The identifier of the specific program to execute within
+    ///        the library.
+    /// @param inputs Array of parameters to pass to the program, including both
+    ///        input and output parameters.
+    ///
+    /// @return SpfRunHandle A unique identifier for this specific program
+    ///         execution request that can be used to retrieve results with
+    ///         the getOutputHandle function.
     function requestSpf(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
         internal
         returns (SpfRunHandle)
@@ -167,10 +222,7 @@ library Spf {
         bool foundOutput = false;
         for (uint256 i = 0; i < inputs.length; i++) {
             SpfParamType paramType = SpfParamType(inputs[i].metaData >> 248);
-            if (
-                paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray
-                    || paramType == SpfParamType.PlaintextArray
-            ) {
+            if (paramType == SpfParamType.CiphertextArray || paramType == SpfParamType.OutputCiphertextArray) {
                 foundOutput = true;
                 break;
             }
@@ -187,8 +239,17 @@ library Spf {
         return SpfRunHandle.wrap(runHash);
     }
 
-    function getOutputHandle(SpfRunHandle runHandle, uint8 index) internal pure returns (SpfCiphertextIdentifier) {
+    /// Generates a unique ciphertext identifier for a specific output from an
+    /// SPF program execution
+    ///
+    /// @param runHandle The handle returned by the requestSpf function
+    /// @param index The zero-based index of the output parameter to retrieve
+    /// @return SpfCiphertextIdentifier A unique identifier for accessing the
+    ///         specified output from the program execution
+    function getOutputHandle(SpfRunHandle runHandle, uint8 index) internal pure returns (SpfParameter memory) {
         bytes32 outputHandle = keccak256(abi.encodePacked(runHandle, index));
-        return SpfCiphertextIdentifier.wrap(outputHandle);
+        SpfCiphertextIdentifier identifier = SpfCiphertextIdentifier.wrap(outputHandle);
+
+        return createCiphertextParam(identifier);
     }
 }
