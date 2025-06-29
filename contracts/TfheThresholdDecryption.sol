@@ -17,6 +17,7 @@ contract TfheThresholdDecryption {
         emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param.payload[0]);
     }
 
+    /// Modifier to restrict access to the threshold decryption service
     modifier onlyThresholdDecryption() {
         require(
             msg.sender == 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866,
