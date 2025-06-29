@@ -4,72 +4,9 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 import "../contracts/Spf.sol";
 
-// Create a test contract that exposes the Spf library functions
-contract SpfWrapper {
+contract SpfTest is Test {
     using Spf for *;
 
-    function exposedCreateCiphertextParam(Spf.SpfCiphertextIdentifier identifier)
-        external
-        pure
-        returns (Spf.SpfParameter memory)
-    {
-        return Spf.createCiphertextParam(identifier);
-    }
-
-    function exposedCreateCiphertextArrayParam(Spf.SpfCiphertextIdentifier[] calldata identifiers)
-        external
-        pure
-        returns (Spf.SpfParameter memory)
-    {
-        return Spf.createCiphertextArrayParam(identifiers);
-    }
-
-    function exposedCreateOutputCiphertextArrayParam(uint8 numBytes) external pure returns (Spf.SpfParameter memory) {
-        return Spf.createOutputCiphertextArrayParam(numBytes);
-    }
-
-    function exposedCreatePlaintextParam(uint8 bitWidth, uint256 value)
-        external
-        pure
-        returns (Spf.SpfParameter memory)
-    {
-        return Spf.createPlaintextParam(bitWidth, value);
-    }
-
-    function exposedCreatePlaintextArrayParam(uint8 bitWidth, uint256[] memory values)
-        external
-        pure
-        returns (Spf.SpfParameter memory)
-    {
-        return Spf.createPlaintextArrayParam(bitWidth, values);
-    }
-
-    function exposedRequestSpf(Spf.SpfLibrary spfLibrary, Spf.SpfProgram program, Spf.SpfParameter[] calldata inputs)
-        external
-        returns (Spf.SpfRunHandle)
-    {
-        return Spf.requestSpf(spfLibrary, program, inputs);
-    }
-
-    function exposedGetOutputHandle(Spf.SpfRunHandle runHandle, uint8 index)
-        external
-        pure
-        returns (Spf.SpfCiphertextIdentifier)
-    {
-        return Spf.getOutputHandle(runHandle, index);
-    }
-
-    // Helper to create a SpfRun struct for comparison in tests
-    function createSpfRun(Spf.SpfLibrary spfLibrary, Spf.SpfProgram program, Spf.SpfParameter[] memory parameters)
-        external
-        pure
-        returns (Spf.SpfRun memory)
-    {
-        return Spf.SpfRun({spfLibrary: spfLibrary, program: program, parameters: parameters});
-    }
-}
-
-contract SpfTest is Test {
     // Constants for testing only, no real life meaning
     Spf.SpfLibrary constant SPF_LIBRARY =
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
@@ -88,21 +25,15 @@ contract SpfTest is Test {
     Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_4 =
         Spf.SpfCiphertextIdentifier.wrap(0xe09312d4fba52955d7aaffe9dcd224f7e69995a8226acb7422130cab2313be07);
 
-    SpfWrapper public spfWrapper;
-
     // Event to test against
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
-
-    function setUp() public {
-        spfWrapper = new SpfWrapper();
-    }
 
     function test_RequestSpf_EmitsEvent() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_2);
-        inputs[2] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
+        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextParam(CIPHERTEXT_ID_2);
+        inputs[2] = Spf.createOutputCiphertextArrayParam(4);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
@@ -113,37 +44,42 @@ contract SpfTest is Test {
         expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
 
         // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, SPF_PROGRAM, expectedParams);
+        Spf.SpfRun memory expectedRun =
+            Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: expectedParams});
 
         // Expect the RunProgramOnSpf event with correct parameters
-        vm.expectEmit(true, true, false, true);
-        emit RunProgramOnSpf(address(this), expectedRun);
+        vm.expectEmit(true, true, true, true);
+        emit RunProgramOnSpf(msg.sender, expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_RequestSpf_RequireInputs() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](0);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No inputs provided");
-        spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
+        Spf.requestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
     }
 
+    // These reverts are expected to be internal, so we allow them in the test configuration
+    // See https://getfoundry.sh/misc/v1.0-migration/#expect-revert-cheatcode-disabled-on-internal-calls-by-default
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_RequestSpf_RequireOutputs() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
+        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
-        spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
+        Spf.requestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
     }
 
     function test_RequestSpf_Parameters() public {
@@ -159,11 +95,11 @@ contract SpfTest is Test {
         values[2] = 4;
 
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](5);
-        inputs[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        inputs[1] = spfWrapper.exposedCreateCiphertextArrayParam(identifiers);
-        inputs[2] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
-        inputs[3] = spfWrapper.exposedCreatePlaintextParam(32, 1);
-        inputs[4] = spfWrapper.exposedCreatePlaintextArrayParam(32, values);
+        inputs[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextArrayParam(identifiers);
+        inputs[2] = Spf.createOutputCiphertextArrayParam(4);
+        inputs[3] = Spf.createPlaintextParam(32, 1);
+        inputs[4] = Spf.createPlaintextArrayParam(32, values);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](5);
@@ -181,26 +117,30 @@ contract SpfTest is Test {
         expectedParams[4].payload[1] = bytes32(values[1]);
         expectedParams[4].payload[2] = bytes32(values[2]);
 
-        // Create the expected SpfRun struct
-        Spf.SpfRun memory expectedRun = spfWrapper.createSpfRun(SPF_LIBRARY, SPF_PROGRAM, expectedParams);
+        // create the expected SpfRun struct
+        Spf.SpfRun memory expectedRun =
+            Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: expectedParams});
 
         // Expect the RunProgramOnSpf event with correct parameters
-        vm.expectEmit(true, true, false, true);
-        emit RunProgramOnSpf(address(this), expectedRun);
+        vm.expectEmit(true, true, true, true);
+        emit RunProgramOnSpf(msg.sender, expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = spfWrapper.exposedRequestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestSpf(SPF_LIBRARY, SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedRun));
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
-    function test_GetOutputHandle() public view {
+    function test_GetOutputHandle() public pure {
         // Test output handles for different indices
-        Spf.SpfCiphertextIdentifier output0 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0);
-        Spf.SpfCiphertextIdentifier output1 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 1);
-        Spf.SpfCiphertextIdentifier output2 = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 2);
+        Spf.SpfCiphertextIdentifier output0 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 0).payload[0]);
+        Spf.SpfCiphertextIdentifier output1 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 1).payload[0]);
+        Spf.SpfCiphertextIdentifier output2 =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 2).payload[0]);
 
         // Verify each output handle is unique
         assertNotEq(Spf.SpfCiphertextIdentifier.unwrap(output0), Spf.SpfCiphertextIdentifier.unwrap(output1));
@@ -208,7 +148,8 @@ contract SpfTest is Test {
         assertNotEq(Spf.SpfCiphertextIdentifier.unwrap(output0), Spf.SpfCiphertextIdentifier.unwrap(output2));
 
         // Verify deterministic output - same input parameters should result in same output handles
-        Spf.SpfCiphertextIdentifier output0Again = spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0);
+        Spf.SpfCiphertextIdentifier output0Again =
+            Spf.SpfCiphertextIdentifier.wrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 0).payload[0]);
         assertEq(Spf.SpfCiphertextIdentifier.unwrap(output0), Spf.SpfCiphertextIdentifier.unwrap(output0Again));
 
         // Verify output handles are correctly derived from the run handle and index
@@ -219,41 +160,31 @@ contract SpfTest is Test {
         assertEq(Spf.SpfCiphertextIdentifier.unwrap(output1), expectedOutput1);
     }
 
-    function test_GetOutputHandle_DifferentRuns() public view {
+    function test_GetOutputHandle_DifferentRuns() public pure {
         // Verify output handles are correctly derived from the run handle and index
         bytes32 expectedOutput0 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(0)));
-        assertEq(
-            Spf.SpfCiphertextIdentifier.unwrap(spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 0)), expectedOutput0
-        );
+        assertEq(Spf.getOutputHandle(SPF_RUN_HANDLE, 0).payload[0], expectedOutput0);
 
         bytes32 expectedOutput1 = keccak256(abi.encodePacked(SPF_RUN_HANDLE, uint8(1)));
-        assertEq(
-            Spf.SpfCiphertextIdentifier.unwrap(spfWrapper.exposedGetOutputHandle(SPF_RUN_HANDLE, 1)), expectedOutput1
-        );
+        assertEq(Spf.getOutputHandle(SPF_RUN_HANDLE, 1).payload[0], expectedOutput1);
 
         bytes32 expectedOutput2 = keccak256(abi.encodePacked(SPF_ALT_RUN_HANDLE, uint8(0)));
-        assertEq(
-            Spf.SpfCiphertextIdentifier.unwrap(spfWrapper.exposedGetOutputHandle(SPF_ALT_RUN_HANDLE, 0)),
-            expectedOutput2
-        );
+        assertEq(Spf.getOutputHandle(SPF_ALT_RUN_HANDLE, 0).payload[0], expectedOutput2);
 
         bytes32 expectedOutput3 = keccak256(abi.encodePacked(SPF_ALT_RUN_HANDLE, uint8(1)));
-        assertEq(
-            Spf.SpfCiphertextIdentifier.unwrap(spfWrapper.exposedGetOutputHandle(SPF_ALT_RUN_HANDLE, 1)),
-            expectedOutput3
-        );
+        assertEq(Spf.getOutputHandle(SPF_ALT_RUN_HANDLE, 1).payload[0], expectedOutput3);
     }
 
-    function test_outputHash() public view {
-        // Create sample input parameters
+    function test_outputHash() public pure {
+        // create sample input parameters
         Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](5);
-        parameters[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        parameters[1] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_2);
-        parameters[2] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_3);
-        parameters[3] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_4);
-        parameters[4] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
+        parameters[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
+        parameters[1] = Spf.createCiphertextParam(CIPHERTEXT_ID_2);
+        parameters[2] = Spf.createCiphertextParam(CIPHERTEXT_ID_3);
+        parameters[3] = Spf.createCiphertextParam(CIPHERTEXT_ID_4);
+        parameters[4] = Spf.createOutputCiphertextArrayParam(4);
 
-        // Create SpfRun struct
+        // create SpfRun struct
         Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: parameters});
 
         // Calculate the hash using the library function
@@ -270,7 +201,7 @@ contract SpfTest is Test {
     }
 
     function test_outputHashWithEmptyParameters() public pure {
-        // Create SpfRun struct with empty parameters array
+        // create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
         // This won't be able to actually run due to number of inputs check, just for testing
@@ -286,18 +217,18 @@ contract SpfTest is Test {
         assertEq(calculatedHash, expectedHash, "outputHash with empty parameters returned incorrect hash");
     }
 
-    function test_outputHashDifferentInputsDifferentHashes() public view {
-        // Create first SpfRun struct
+    function test_outputHashDifferentInputsDifferentHashes() public pure {
+        // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
-        params1[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_1);
-        params1[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
+        params1[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_1);
+        params1[1] = Spf.createOutputCiphertextArrayParam(4);
 
         Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params1});
 
-        // Create second SpfRun struct with slightly different parameters
+        // create second SpfRun struct with slightly different parameters
         Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](2);
-        params2[0] = spfWrapper.exposedCreateCiphertextParam(CIPHERTEXT_ID_2); // Different value
-        params2[1] = spfWrapper.exposedCreateOutputCiphertextArrayParam(4);
+        params2[0] = Spf.createCiphertextParam(CIPHERTEXT_ID_2); // Different value
+        params2[1] = Spf.createOutputCiphertextArrayParam(4);
 
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params2});
 
@@ -311,7 +242,7 @@ contract SpfTest is Test {
 
     function test_getOutputHandleMatchesService() public pure {
         assertEq(
-            Spf.SpfCiphertextIdentifier.unwrap(Spf.getOutputHandle(SPF_RUN_HANDLE, 2)),
+            Spf.getOutputHandle(SPF_RUN_HANDLE, 2).payload[0],
             0xf3ebbcd8d825a5eea4226ff24917bd903549eac69a2e9b2a152eccf026cc3a0e
         );
     }

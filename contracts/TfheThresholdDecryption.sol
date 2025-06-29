@@ -9,8 +9,8 @@ contract TfheThresholdDecryption {
         address indexed sender, address contractAddress, bytes4 callbackSelector, bytes32 param
     );
 
-    function requestThresholdDecryption(bytes4 callbackSelector, bytes32 param) internal {
-        emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param);
+    function requestThresholdDecryption(bytes4 callbackSelector, Spf.SpfParameter memory param) internal {
+        emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param.payload[0]);
     }
 
     modifier onlyThresholdDecryption() {

@@ -249,8 +249,10 @@ library Spf {
     /// @param index The zero-based index of the output parameter to retrieve
     /// @return SpfCiphertextIdentifier A unique identifier for accessing the
     ///         specified output from the program execution
-    function getOutputHandle(SpfRunHandle runHandle, uint8 index) internal pure returns (SpfCiphertextIdentifier) {
+    function getOutputHandle(SpfRunHandle runHandle, uint8 index) internal pure returns (SpfParameter memory) {
         bytes32 outputHandle = keccak256(abi.encodePacked(runHandle, index));
-        return SpfCiphertextIdentifier.wrap(outputHandle);
+        SpfCiphertextIdentifier identifier = SpfCiphertextIdentifier.wrap(outputHandle);
+
+        return createCiphertextParam(identifier);
     }
 }
