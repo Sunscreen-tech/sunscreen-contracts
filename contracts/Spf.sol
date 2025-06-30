@@ -167,19 +167,28 @@ library Spf {
         uint256 metaData = uint8(SpfParameterType.OutputCiphertextArray);
         metaData <<= 8;
         metaData += numBytes;
-        metaData <<= 240;
+        metaData <<= 8;
+        metaData += 1;
+        metaData <<= 232;
         return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
     }
 
     /// Create a parameter that corresponds to an output ciphertext array
     ///
     /// @param numBytes The number of bytes in each element of this output ciphertext array
+    /// @param numElements The number of elements in this output ciphertext array
     /// @return SpfParameter A parameter that corresponds to an output ciphertext array
-    function createOutputCiphertextArrayParameter(uint8 numBytes) internal pure returns (SpfParameter memory) {
+    function createOutputCiphertextArrayParameter(uint8 numBytes, uint8 numElements)
+        internal
+        pure
+        returns (SpfParameter memory)
+    {
         uint256 metaData = uint8(SpfParameterType.OutputCiphertextArray);
         metaData <<= 8;
         metaData += numBytes;
-        metaData <<= 240;
+        metaData <<= 8;
+        metaData += numElements;
+        metaData <<= 232;
         return SpfParameter({metaData: metaData, payload: new bytes32[](0)});
     }
 
