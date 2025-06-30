@@ -219,7 +219,7 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create a parameter that corresponds to a plaintext array with a single value.
+    /// Generates a unique hash for a specific output value of an SPF program run.
     ///
     /// @param run The SpfRun struct containing the program and parameters
     /// @return bytes32 The identifier for a specific run of the SPF program
@@ -227,7 +227,7 @@ library Spf {
         return keccak256(abi.encode(run));
     }
 
-    /// Requests execution of a Secure Processing Facility (SPF) program with
+    /// Requests execution of a Secure Processing Framework (SPF) program with
     /// the provided parameters.
     ///
     /// @dev This function emits a RunProgramOnSpf event that triggers execution
