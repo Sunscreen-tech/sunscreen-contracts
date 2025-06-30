@@ -287,6 +287,11 @@ library Spf {
         return createCiphertextParameter(identifier);
     }
 
+    /// Checks if a given SpfParameter is uninitialized. This happens when you
+    /// define a parameter but have not set it to anything yet.
+    ///
+    /// @param param The SpfParameter to check
+    /// @return bool True if the parameter is uninitialized, false otherwise
     function isUninitializedParameter(SpfParameter memory param) internal pure returns (bool) {
         return param.metaData == 0 && param.payload.length == 0;
     }
