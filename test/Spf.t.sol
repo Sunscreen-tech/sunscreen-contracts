@@ -10,8 +10,7 @@ contract SpfTest is Test {
     // Constants for testing only, no real life meaning
     Spf.SpfLibrary constant SPF_LIBRARY =
         Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
-    Spf.SpfProgram constant SPF_PROGRAM =
-        Spf.SpfProgram.wrap(0x70726f6772616d00000000000000000000000000000000000000000000000000);
+    Spf.SpfProgram constant SPF_PROGRAM = Spf.SpfProgram.wrap("program");
     Spf.SpfRunHandle constant SPF_RUN_HANDLE =
         Spf.SpfRunHandle.wrap(0x7ab8b802b6bcd9051f054bdbdf7b73771f433b8c9822235a3baab8408df372ef);
     Spf.SpfRunHandle constant SPF_ALT_RUN_HANDLE =
@@ -27,6 +26,11 @@ contract SpfTest is Test {
 
     // Event to test against
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
+
+    // Check that our string gets converted into a 32 byte identifier.
+    function test_programEncoding() public pure {
+        assertEq(Spf.SpfProgram.unwrap(SPF_PROGRAM), 0x70726f6772616d00000000000000000000000000000000000000000000000000);
+    }
 
     function test_RequestSpf_EmitsEvent() public {
         // Prepare test data
