@@ -219,7 +219,7 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create a parameter that corresponds to a plaintext array with a single value.
+    /// Generates a unique hash for a specific output value of an SPF program run.
     ///
     /// @param run The SpfRun struct containing the program and parameters
     /// @return bytes32 The identifier for a specific run of the SPF program
@@ -227,7 +227,7 @@ library Spf {
         return keccak256(abi.encode(run));
     }
 
-    /// Requests execution of a Secure Processing Facility (SPF) program with
+    /// Requests execution of a Secure Processing Framework (SPF) program with
     /// the provided parameters.
     ///
     /// @dev This function emits a RunProgramOnSpf event that triggers execution
@@ -287,6 +287,11 @@ library Spf {
         return createCiphertextParameter(identifier);
     }
 
+    /// Checks if a given SpfParameter is uninitialized. This happens when you
+    /// define a parameter but have not set it to anything yet.
+    ///
+    /// @param param The SpfParameter to check
+    /// @return bool True if the parameter is uninitialized, false otherwise
     function isUninitializedParameter(SpfParameter memory param) internal pure returns (bool) {
         return param.metaData == 0 && param.payload.length == 0;
     }

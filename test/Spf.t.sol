@@ -201,7 +201,7 @@ contract SpfTest is Test {
     }
 
     function test_outputHashWithEmptyParameters() public pure {
-        // create SpfRun struct with empty parameters array
+        // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
         // This won't be able to actually run due to number of inputs check, just for testing
