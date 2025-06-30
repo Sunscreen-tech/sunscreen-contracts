@@ -33,7 +33,7 @@ contract SpfTest is Test {
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
         inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
         inputs[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
-        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
+        inputs[2] = Spf.createOutputCiphertextParameter(32);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
@@ -41,7 +41,7 @@ contract SpfTest is Test {
         expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_1);
         expectedParams[1] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
         expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_2);
-        expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
+        expectedParams[2] = Spf.SpfParameter({metaData: 0x022001 << 232, payload: new bytes32[](0)});
 
         // Create the expected SpfRun struct
         Spf.SpfRun memory expectedRun =
@@ -94,28 +94,30 @@ contract SpfTest is Test {
         values[1] = 3;
         values[2] = 4;
 
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](5);
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](6);
         inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
         inputs[1] = Spf.createCiphertextArrayParameter(identifiers);
-        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
-        inputs[3] = Spf.createPlaintextParameter(32, 1);
-        inputs[4] = Spf.createPlaintextArrayParameter(32, values);
+        inputs[2] = Spf.createOutputCiphertextParameter(32);
+        inputs[3] = Spf.createOutputCiphertextArrayParameter(32, 4);
+        inputs[4] = Spf.createPlaintextParameter(32, 1);
+        inputs[5] = Spf.createPlaintextArrayParameter(32, values);
 
         // Calculate expected parameters
-        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](5);
+        Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](6);
         expectedParams[0] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
         expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_1);
         expectedParams[1] = Spf.SpfParameter({metaData: 0x01 << 248, payload: new bytes32[](3)});
         expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(identifiers[0]);
         expectedParams[1].payload[1] = Spf.SpfCiphertextIdentifier.unwrap(identifiers[1]);
         expectedParams[1].payload[2] = Spf.SpfCiphertextIdentifier.unwrap(identifiers[2]);
-        expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
-        expectedParams[3] = Spf.SpfParameter({metaData: 0x0320 << 240, payload: new bytes32[](1)});
-        expectedParams[3].payload[0] = bytes32(uint256(1));
-        expectedParams[4] = Spf.SpfParameter({metaData: 0x0420 << 240, payload: new bytes32[](3)});
-        expectedParams[4].payload[0] = bytes32(values[0]);
-        expectedParams[4].payload[1] = bytes32(values[1]);
-        expectedParams[4].payload[2] = bytes32(values[2]);
+        expectedParams[2] = Spf.SpfParameter({metaData: 0x022001 << 232, payload: new bytes32[](0)});
+        expectedParams[3] = Spf.SpfParameter({metaData: 0x022004 << 232, payload: new bytes32[](0)});
+        expectedParams[4] = Spf.SpfParameter({metaData: 0x0320 << 240, payload: new bytes32[](1)});
+        expectedParams[4].payload[0] = bytes32(uint256(1));
+        expectedParams[5] = Spf.SpfParameter({metaData: 0x0420 << 240, payload: new bytes32[](3)});
+        expectedParams[5].payload[0] = bytes32(values[0]);
+        expectedParams[5].payload[1] = bytes32(values[1]);
+        expectedParams[5].payload[2] = bytes32(values[2]);
 
         // create the expected SpfRun struct
         Spf.SpfRun memory expectedRun =
@@ -182,7 +184,7 @@ contract SpfTest is Test {
         parameters[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
         parameters[2] = Spf.createCiphertextParameter(CIPHERTEXT_ID_3);
         parameters[3] = Spf.createCiphertextParameter(CIPHERTEXT_ID_4);
-        parameters[4] = Spf.createOutputCiphertextArrayParameter(4);
+        parameters[4] = Spf.createOutputCiphertextParameter(32);
 
         // create SpfRun struct
         Spf.SpfRun memory run = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: parameters});
@@ -221,14 +223,14 @@ contract SpfTest is Test {
         // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
         params1[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
-        params1[1] = Spf.createOutputCiphertextArrayParameter(4);
+        params1[1] = Spf.createOutputCiphertextParameter(32);
 
         Spf.SpfRun memory run1 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params1});
 
         // create second SpfRun struct with slightly different parameters
         Spf.SpfParameter[] memory params2 = new Spf.SpfParameter[](2);
         params2[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2); // Different value
-        params2[1] = Spf.createOutputCiphertextArrayParameter(4);
+        params2[1] = Spf.createOutputCiphertextParameter(32);
 
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: SPF_LIBRARY, program: SPF_PROGRAM, parameters: params2});
 

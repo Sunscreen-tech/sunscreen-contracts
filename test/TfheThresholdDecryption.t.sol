@@ -87,7 +87,7 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
         inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
         inputs[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
-        inputs[2] = Spf.createOutputCiphertextArrayParameter(4);
+        inputs[2] = Spf.createOutputCiphertextParameter(32);
 
         // Expect RunProgramOnSpf event
         vm.expectEmit(true, true, true, true);
@@ -98,7 +98,7 @@ contract TfheThresholdDecryptionTest is Test {
         expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_1);
         expectedParams[1] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
         expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_2);
-        expectedParams[2] = Spf.SpfParameter({metaData: 0x0204 << 240, payload: new bytes32[](0)});
+        expectedParams[2] = Spf.SpfParameter({metaData: 0x022001 << 232, payload: new bytes32[](0)});
 
         // Create expected SpfRun
         Spf.SpfRun memory expectedRun =
@@ -155,7 +155,7 @@ contract TfheThresholdDecryptionTest is Test {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
         inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createOutputCiphertextArrayParameter(12);
+        inputs[1] = Spf.createOutputCiphertextArrayParameter(32, 3);
 
         // Execute the function
         Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);
