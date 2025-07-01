@@ -29,7 +29,7 @@ contract MockDecryptionUser is TfheThresholdDecryption {
         Spf.SpfParameter memory outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestThresholdDecryption(this.handleDecryptionResult.selector, outputHandle);
+        requestThresholdDecryption(this.handleDecryptionResult.selector, Spf.passToDecryption(outputHandle));
 
         return runHandle;
     }

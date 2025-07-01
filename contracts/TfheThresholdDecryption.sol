@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./Spf.sol";
-
 // Library contract that emits events for decryption, using a callback function to handle the decryption result
 contract TfheThresholdDecryption {
     event RequestThresholdDecryption(
@@ -13,8 +11,8 @@ contract TfheThresholdDecryption {
     ///
     /// @param callbackSelector The selector of the callback function to handle the decryption result.
     /// @param param The parameter to be decrypted.
-    function requestThresholdDecryption(bytes4 callbackSelector, Spf.SpfParameter memory param) internal {
-        emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param.payload[0]);
+    function requestThresholdDecryption(bytes4 callbackSelector, bytes32 param) internal {
+        emit RequestThresholdDecryption(msg.sender, address(this), callbackSelector, param);
     }
 
     /// Modifier to restrict access to the threshold decryption service
