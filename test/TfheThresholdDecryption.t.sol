@@ -3,12 +3,10 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 import "../contracts/TfheThresholdDecryption.sol";
-import "../contracts/Spf.sol";
+import "./Spf.t.sol";
 
 // Mock contract that inherits from TfheThresholdDecryption
 contract MockDecryptionUser is TfheThresholdDecryption {
-    using Spf for *;
-
     // Store decryption results for verification
     uint256 public lastDecryptedValue;
     bool public decryptionReceived;
@@ -50,20 +48,6 @@ contract MockDecryptionUser is TfheThresholdDecryption {
 }
 
 contract TfheThresholdDecryptionTest is Test {
-    using Spf for *;
-
-    // Constants for testing only, no real life meaning
-    address constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
-    uint256 constant DECRYPTED_VALUE = 123;
-    Spf.SpfLibrary constant SPF_LIBRARY =
-        Spf.SpfLibrary.wrap(0x61dc6dc7d7d82fa0e9870bf697cbb69544fdb1cc0ddac1427fc863b29e129860);
-    Spf.SpfProgram constant PROGRAM =
-        Spf.SpfProgram.wrap(0x70726F6772616D00000000000000000000000000000000000000000000000000);
-    Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_1 =
-        Spf.SpfCiphertextIdentifier.wrap(0x363ec54649521a2aca55a792954a4678698076f38cab85a06bb5de1ef8b20a7c);
-    Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_2 =
-        Spf.SpfCiphertextIdentifier.wrap(0x13ca007bae631cf35724b1d4c92ac26cd8fa49c2e1b30cc7b886f86d8a579525);
-
     // Test contract instances
     MockDecryptionUser public mockUser;
 
@@ -79,14 +63,14 @@ contract TfheThresholdDecryptionTest is Test {
 
     function setUp() public {
         // Deploy the mock user contract
-        mockUser = new MockDecryptionUser(SPF_LIBRARY, PROGRAM);
+        mockUser = new MockDecryptionUser(TC.SPF_LIBRARY, TC.SPF_PROGRAM);
     }
 
     function test_ExecuteAndRequestDecryption() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextParameter(CIPHERTEXT_ID_2);
+        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
         inputs[2] = Spf.createOutputCiphertextParameter(32);
 
         // Expect RunProgramOnSpf event
@@ -95,9 +79,9 @@ contract TfheThresholdDecryptionTest is Test {
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
         expectedParams[0] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
-        expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_1);
+        expectedParams[0].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_1);
         expectedParams[1] = Spf.SpfParameter({metaData: 0, payload: new bytes32[](1)});
-        expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(CIPHERTEXT_ID_2);
+        expectedParams[1].payload[0] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_2);
         expectedParams[2] = Spf.SpfParameter({metaData: 0x022001 << 232, payload: new bytes32[](0)});
 
         // Create expected SpfRun
@@ -130,31 +114,31 @@ contract TfheThresholdDecryptionTest is Test {
         assertFalse(mockUser.decryptionReceived());
         assertEq(mockUser.lastDecryptedValue(), 0);
 
-        vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
+        vm.prank(TC.THRESHOLD_DECRYPTION_SERVICE);
+        mockUser.handleDecryptionResult(TC.DECRYPTED_VALUE);
 
         // Verify that decryption was received and stored correctly
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
+        assertEq(mockUser.lastDecryptedValue(), TC.DECRYPTED_VALUE);
     }
 
     function test_OnlyThresholdDecryption() public {
         // Try to call the callback function from an unauthorized address
         vm.expectRevert("Only the threshold decryption service can call this function");
-        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
+        mockUser.handleDecryptionResult(TC.DECRYPTED_VALUE);
 
         // Verify it works when called from the threshold decryption service
-        vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
+        vm.prank(TC.THRESHOLD_DECRYPTION_SERVICE);
+        mockUser.handleDecryptionResult(TC.DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
+        assertEq(mockUser.lastDecryptedValue(), TC.DECRYPTED_VALUE);
     }
 
     function test_MultipleOutputs() public {
         // Create test input parameters
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](2);
-        inputs[0] = Spf.createCiphertextParameter(CIPHERTEXT_ID_1);
+        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
         inputs[1] = Spf.createOutputCiphertextArrayParameter(32, 3);
 
         // Execute the function
@@ -174,19 +158,19 @@ contract TfheThresholdDecryptionTest is Test {
         assertTrue(Spf.SpfCiphertextIdentifier.unwrap(output0) != Spf.SpfCiphertextIdentifier.unwrap(output2));
 
         // Verify the first output was requested for decryption
-        vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
+        vm.prank(TC.THRESHOLD_DECRYPTION_SERVICE);
+        mockUser.handleDecryptionResult(TC.DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
     }
 
     function test_ResetDecryptionState() public {
         // Set decryption state
-        vm.prank(THRESHOLD_DECRYPTION_SERVICE);
-        mockUser.handleDecryptionResult(DECRYPTED_VALUE);
+        vm.prank(TC.THRESHOLD_DECRYPTION_SERVICE);
+        mockUser.handleDecryptionResult(TC.DECRYPTED_VALUE);
 
         assertTrue(mockUser.decryptionReceived());
-        assertEq(mockUser.lastDecryptedValue(), DECRYPTED_VALUE);
+        assertEq(mockUser.lastDecryptedValue(), TC.DECRYPTED_VALUE);
 
         // Reset state
         mockUser.resetDecryptionState();
