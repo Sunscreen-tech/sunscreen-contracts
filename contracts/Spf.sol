@@ -228,6 +228,18 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
+    /// Turns a parameter from output into identifier understandable by the decryption service
+    ///
+    /// @param param The SpfParameter returned from `getOutputHandle`
+    /// @return bytes32 The identifier for decryption service to use
+    function passToDecryption(SpfParameter memory param) internal pure returns (bytes32) {
+        require(
+            param.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && param.payload.length == 1,
+            "SPF: Param is not an output handle"
+        );
+        return param.payload[0];
+    }
+
     /// Generates a unique hash for a specific output value of an SPF program run.
     ///
     /// @param run The SpfRun struct containing the program and parameters
