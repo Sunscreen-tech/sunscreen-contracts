@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 // Library contract that emits events for decryption, using a callback function to handle the decryption result
 contract TfheThresholdDecryption {
+    address public constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
+
     event RequestThresholdDecryption(
         address indexed sender, address contractAddress, bytes4 callbackSelector, bytes32 param
     );
@@ -18,8 +20,7 @@ contract TfheThresholdDecryption {
     /// Modifier to restrict access to the threshold decryption service
     modifier onlyThresholdDecryption() {
         require(
-            msg.sender == 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866,
-            "Only the threshold decryption service can call this function"
+            msg.sender == THRESHOLD_DECRYPTION_SERVICE, "Only the threshold decryption service can call this function"
         );
         _;
     }
