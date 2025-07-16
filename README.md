@@ -1,12 +1,12 @@
 # Sunscreen SPF and Decryption Contracts
 
-This repository contains contracts for interacting with Sunscreen's SPF (Secure Procesing Framework) and decryption service on EVM compatible chains. To include this into your [`foundry`](https://getfoundry.sh/) project, use the following command to add the dependency:
+This repository contains contracts for interacting with Sunscreen's SPF (Secure Procesing Framework) and decryption service on EVM compatible chains. To include these contracts into your [`foundry`](https://getfoundry.sh/) project, use the following command to install the contracts as a dependency.
 
 ```bash
 forge install sunscreen-tech/sunscreen-contracts
 ```
 
-In order to habe simple use in other contracts, you'll likely want to update the `remappings.txt` file in your project to include the following:
+To enable simple importing in other contracts, update the `remappings.txt` file in your project to include the following.
 
 ```
 @sunscreen/=lib/sunscreen-contracts/
