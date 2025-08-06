@@ -29,6 +29,12 @@ library TC {
     Spf.SpfCiphertextIdentifier constant CIPHERTEXT_ID_4 =
         Spf.SpfCiphertextIdentifier.wrap(0xe09312d4fba52955d7aaffe9dcd224f7e69995a8226acb7422130cab2313be07);
 
+    address constant ADDRESS_1 = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+
+    address constant ADDRESS_2 = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
+
+    address constant ADDRESS_3 = 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc;
+
     address constant THRESHOLD_DECRYPTION_SERVICE = 0xB79e28b5DC528DDCa75b2f1Df6d234C2A00Db866;
 
     uint256 constant DECRYPTED_VALUE = 123;
@@ -37,6 +43,8 @@ library TC {
 contract SpfTest is Test {
     // Event to test against
     event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
+
+    event ChangeAccessOnSpf(address indexed sender, Spf.SpfAccess access);
 
     // Check that our string gets converted into a 32 byte identifier.
     function test_programEncoding() public pure {
@@ -266,5 +274,71 @@ contract SpfTest is Test {
             Spf.getOutputHandle(TC.SPF_RUN_HANDLE, 2).payload[0],
             0xf3ebbcd8d825a5eea4226ff24917bd903549eac69a2e9b2a152eccf026cc3a0e
         );
+    }
+
+    function test_RequestAcl_EmitsEvent_And_Parameters() public {
+        // Prepare test data
+        Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](3);
+        changes[0] = Spf.createAddAdminAccessChange(TC.ADDRESS_1);
+        changes[1] = Spf.createAddRunAccessChange(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes[2] = Spf.createAddDecryptAccessChange(TC.ADDRESS_3);
+
+        // Calculate expected parameters
+        Spf.SpfAccessChange[] memory expectedChanges = new Spf.SpfAccessChange[](3);
+        expectedChanges[0] = Spf.SpfAccessChange({metaData: 0, payload: new bytes32[](1)});
+        expectedChanges[0].payload[0] = bytes32(bytes20(TC.ADDRESS_1));
+        expectedChanges[1] = Spf.SpfAccessChange({metaData: 0x01 << 248, payload: new bytes32[](3)});
+        expectedChanges[1].payload[0] = bytes20(TC.ADDRESS_2);
+        expectedChanges[1].payload[1] = Spf.SpfLibrary.unwrap(TC.SPF_LIBRARY);
+        expectedChanges[1].payload[2] = Spf.SpfProgram.unwrap(TC.SPF_PROGRAM);
+        expectedChanges[2] = Spf.SpfAccessChange({metaData: 0x02 << 248, payload: new bytes32[](1)});
+        expectedChanges[2].payload[0] = bytes20(TC.ADDRESS_3);
+
+        // Create the expected SpfRun struct
+        Spf.SpfAccess memory expectedAccess = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: expectedChanges});
+
+        // Expect the RunProgramOnSpf event with correct parameters
+        vm.expectEmit(true, true, true, true);
+        emit ChangeAccessOnSpf(msg.sender, expectedAccess);
+
+        // Call the function
+        Spf.SpfCiphertextIdentifier returnedHandle = Spf.requestAcl(TC.CIPHERTEXT_ID_1, changes);
+
+        // Verify the returned handle matches what we expect
+        bytes32 expectedHash = keccak256(abi.encode(expectedAccess));
+        assertEq(Spf.SpfCiphertextIdentifier.unwrap(returnedHandle), expectedHash);
+    }
+
+    /// forge-config: default.allow_internal_expect_revert = true
+    function test_RequestAcl_RequireInputs() public {
+        // Prepare test data
+        Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](0);
+
+        // Expect revert with specific message
+        vm.expectRevert("SPF: No changes specified");
+        Spf.requestAcl(TC.CIPHERTEXT_ID_1, changes);
+    }
+
+    function test_outputCiphertextIdentifierDifferentInputsDifferentChanges() public pure {
+        // create first SpfAccess struct
+        Spf.SpfAccessChange[] memory changes1 = new Spf.SpfAccessChange[](2);
+        changes1[0] = Spf.createAddRunAccessChange(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes1[1] = Spf.createAddDecryptAccessChange(TC.ADDRESS_2);
+
+        Spf.SpfAccess memory access1 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes1});
+
+        // create second SpfAccess struct with slightly different parameters
+        Spf.SpfAccessChange[] memory changes2 = new Spf.SpfAccessChange[](2);
+        changes2[0] = Spf.createAddRunAccessChange(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes2[1] = Spf.createAddDecryptAccessChange(TC.ADDRESS_3); // different value
+
+        Spf.SpfAccess memory access2 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes2});
+
+        // Get hashes for both changes
+        bytes32 hash1 = keccak256(abi.encode(access1));
+        bytes32 hash2 = keccak256(abi.encode(access2));
+
+        // Verify that different changes produce different hashes
+        assertTrue(hash1 != hash2, "Different changes should produce different hashes");
     }
 }

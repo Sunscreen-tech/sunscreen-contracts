@@ -256,12 +256,12 @@ library Spf {
     /// Create an access change that indicates adding admin to ciphertext.
     ///
     /// @param addr: the address to add as admin
-    function createAddAdminAccessChange(address addr) internal pure returns (SpfParameter memory) {
+    function createAddAdminAccessChange(address addr) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = bytes20(addr);
-        return SpfParameter({metaData: metaData, payload: payload});
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Create an access change that indicates adding run permission to ciphertext.
@@ -272,7 +272,7 @@ library Spf {
     function createAddRunAccessChange(address addr, SpfLibrary lib, SpfProgram prog)
         internal
         pure
-        returns (SpfParameter memory)
+        returns (SpfAccessChange memory)
     {
         uint256 metaData = uint8(SpfAccessChangeType.AddRun);
         metaData <<= 248;
@@ -280,18 +280,18 @@ library Spf {
         payload[0] = bytes20(addr);
         payload[1] = SpfLibrary.unwrap(lib);
         payload[2] = SpfProgram.unwrap(prog);
-        return SpfParameter({metaData: metaData, payload: payload});
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Create an access change that indicates adding decrypt permission to ciphertext.
     ///
     /// @param addr: the address to add as decryptor
-    function createAddDecryptAccessChange(address addr) internal pure returns (SpfParameter memory) {
+    function createAddDecryptAccessChange(address addr) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddDecrypt);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = bytes20(addr);
-        return SpfParameter({metaData: metaData, payload: payload});
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Turns a parameter from output into identifier understandable by the decryption service
