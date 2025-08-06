@@ -253,7 +253,7 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create a parameter that indicates adding admin to ciphertext.
+    /// Create an access change that indicates adding admin to ciphertext.
     ///
     /// @param addr: the address to add as admin
     function createAddAdminAccessChange(address addr) internal pure returns (SpfParameter memory) {
@@ -264,7 +264,7 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create a parameter that indicates adding run permission to ciphertext.
+    /// Create an access change that indicates adding run permission to ciphertext.
     ///
     /// @param addr: the address to add as runner
     /// @param lib: the library (program binary) identifier that the permission applies to
@@ -283,7 +283,7 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create a parameter that indicates adding decrypt permission to ciphertext.
+    /// Create an access change that indicates adding decrypt permission to ciphertext.
     ///
     /// @param addr: the address to add as decryptor
     function createAddDecryptAccessChange(address addr) internal pure returns (SpfParameter memory) {
@@ -364,6 +364,9 @@ library Spf {
         internal
         returns (SpfCiphertextIdentifier)
     {
+        // Require at least one change
+        require(changes.length > 0, "SPF: No changes specified");
+
         SpfAccess memory acc = SpfAccess({ciphertext: ciphertext, changes: changes});
 
         // Get hash of this struct
