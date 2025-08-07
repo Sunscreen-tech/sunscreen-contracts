@@ -62,11 +62,11 @@ library Spf {
         // Indicates adding admin
         AddAdmin,
         // Indicates adding run permission
-        AddRun,
+        AllowRun,
         // Indicates adding decryption permission
         //
         // Also applies for recryption and downloading
-        AddDecrypt
+        AllowDecrypt
     }
 
     // Users should use the following `createXxxAccessChange` functions to create
@@ -256,7 +256,7 @@ library Spf {
     /// Create an access change that indicates adding admin to ciphertext.
     ///
     /// @param addr: the address to add as admin
-    function createAddAdminAccessChange(address addr) internal pure returns (SpfAccessChange memory) {
+    function addAdmin(address addr) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
@@ -269,12 +269,8 @@ library Spf {
     /// @param addr: the address to add as runner
     /// @param lib: the library (program binary) identifier that the permission applies to
     /// @param prog: the entry point function name that the permission applies to
-    function createAddRunAccessChange(address addr, SpfLibrary lib, SpfProgram prog)
-        internal
-        pure
-        returns (SpfAccessChange memory)
-    {
-        uint256 metaData = uint8(SpfAccessChangeType.AddRun);
+    function allowRun(address addr, SpfLibrary lib, SpfProgram prog) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](3);
         payload[0] = bytes20(addr);
@@ -286,8 +282,8 @@ library Spf {
     /// Create an access change that indicates adding decrypt permission to ciphertext.
     ///
     /// @param addr: the address to add as decryptor
-    function createAddDecryptAccessChange(address addr) internal pure returns (SpfAccessChange memory) {
-        uint256 metaData = uint8(SpfAccessChangeType.AddDecrypt);
+    function allowDecrypt(address addr) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = bytes20(addr);

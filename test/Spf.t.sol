@@ -279,9 +279,9 @@ contract SpfTest is Test {
     function test_RequestAcl_EmitsEvent_And_Parameters() public {
         // Prepare test data
         Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](3);
-        changes[0] = Spf.createAddAdminAccessChange(TC.ADDRESS_1);
-        changes[1] = Spf.createAddRunAccessChange(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes[2] = Spf.createAddDecryptAccessChange(TC.ADDRESS_3);
+        changes[0] = Spf.addAdmin(TC.ADDRESS_1);
+        changes[1] = Spf.allowRun(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes[2] = Spf.allowDecrypt(TC.ADDRESS_3);
 
         // Calculate expected parameters
         Spf.SpfAccessChange[] memory expectedChanges = new Spf.SpfAccessChange[](3);
@@ -322,15 +322,15 @@ contract SpfTest is Test {
     function test_outputCiphertextIdentifierDifferentInputsDifferentChanges() public pure {
         // create first SpfAccess struct
         Spf.SpfAccessChange[] memory changes1 = new Spf.SpfAccessChange[](2);
-        changes1[0] = Spf.createAddRunAccessChange(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes1[1] = Spf.createAddDecryptAccessChange(TC.ADDRESS_2);
+        changes1[0] = Spf.allowRun(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes1[1] = Spf.allowDecrypt(TC.ADDRESS_2);
 
         Spf.SpfAccess memory access1 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes1});
 
         // create second SpfAccess struct with slightly different parameters
         Spf.SpfAccessChange[] memory changes2 = new Spf.SpfAccessChange[](2);
-        changes2[0] = Spf.createAddRunAccessChange(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes2[1] = Spf.createAddDecryptAccessChange(TC.ADDRESS_3); // different value
+        changes2[0] = Spf.allowRun(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes2[1] = Spf.allowDecrypt(TC.ADDRESS_3); // different value
 
         Spf.SpfAccess memory access2 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes2});
 
