@@ -58,7 +58,32 @@ library Spf {
         SpfParameter[] parameters;
     }
 
+    enum SpfAccessChangeType {
+        // Indicates adding admin
+        AddAdmin,
+        // Indicates adding run permission
+        AllowRun,
+        // Indicates adding decryption permission
+        //
+        // Also applies for recryption and downloading
+        AllowDecrypt
+    }
+
+    // Users should use the following `createXxxAccessChange` functions to create
+    // parameters instead of handcrafting
+    struct SpfAccessChange {
+        uint256 metaData;
+        bytes32[] payload;
+    }
+
+    struct SpfAccess {
+        SpfCiphertextIdentifier ciphertext;
+        SpfAccessChange[] changes;
+    }
+
     event RunProgramOnSpf(address indexed sender, SpfRun run);
+
+    event ChangeAccessOnSpf(address indexed sender, SpfAccess access);
 
     // Trivial encryption has no security so by using the ciphertext identifiers below
     // everyone knows the data you are using, we provide just 0 and 1 here
@@ -228,6 +253,43 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
+    /// Create an access change that indicates adding admin to ciphertext.
+    ///
+    /// @param addr: the address to add as admin
+    function addAdmin(address addr) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
+        metaData <<= 248;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(addr);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
+    /// Create an access change that indicates adding run permission to ciphertext.
+    ///
+    /// @param addr: the address to add as runner
+    /// @param lib: the library (program binary) identifier that the permission applies to
+    /// @param prog: the entry point function name that the permission applies to
+    function allowRun(address addr, SpfLibrary lib, SpfProgram prog) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
+        metaData <<= 248;
+        bytes32[] memory payload = new bytes32[](3);
+        payload[0] = bytes20(addr);
+        payload[1] = SpfLibrary.unwrap(lib);
+        payload[2] = SpfProgram.unwrap(prog);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
+    /// Create an access change that indicates adding decrypt permission to ciphertext.
+    ///
+    /// @param addr: the address to add as decryptor
+    function allowDecrypt(address addr) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
+        metaData <<= 248;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(addr);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
     /// Turns a parameter from output into identifier understandable by the decryption service
     ///
     /// @param param The SpfParameter returned from `getOutputHandle`
@@ -292,6 +354,23 @@ library Spf {
         emit RunProgramOnSpf(msg.sender, run);
 
         return SpfRunHandle.wrap(runHash);
+    }
+
+    function requestAcl(SpfCiphertextIdentifier ciphertext, SpfAccessChange[] memory changes)
+        internal
+        returns (SpfCiphertextIdentifier)
+    {
+        // Require at least one change
+        require(changes.length > 0, "SPF: No changes specified");
+
+        SpfAccess memory acc = SpfAccess({ciphertext: ciphertext, changes: changes});
+
+        // Get hash of this struct
+        bytes32 accHash = keccak256(abi.encode(acc));
+
+        emit ChangeAccessOnSpf(msg.sender, acc);
+
+        return SpfCiphertextIdentifier.wrap(accHash);
     }
 
     /// Generates a unique ciphertext identifier for a specific output from an
