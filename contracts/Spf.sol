@@ -69,7 +69,14 @@ library Spf {
         AllowDecrypt
     }
 
-    // Users should use the following `createXxxAccessChange` functions to create
+    enum SpfAccessEntityType {
+        // Ethereum contract address, to be used with chain ID
+        EthereumContract,
+        // External account address
+        External
+    }
+
+    // Users should use the following `addXxx` / `allowXxx` functions to create
     // parameters instead of handcrafting
     struct SpfAccessChange {
         uint256 metaData;
@@ -253,25 +260,55 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Create an access change that indicates adding admin to ciphertext.
+    /// Create an access change that indicates adding admin to ciphertext, where
+    /// the admin is an ethereum address with a chain ID
     ///
+    /// @param chainId: the chain ID for the address to add as admin
     /// @param addr: the address to add as admin
-    function addAdmin(address addr) internal pure returns (SpfAccessChange memory) {
+    function addEthAdmin(uint64 chainId, address addr) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
-        metaData <<= 248;
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += chainId;
+        metaData <<= 176;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = bytes20(addr);
         return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
-    /// Create an access change that indicates adding run permission to ciphertext.
+    /// Create an access change that indicates adding admin to ciphertext, where
+    /// the admin is an external address without a chain ID
     ///
+    /// @param addr: the address to add as admin
+    function addAdmin(address addr) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.External);
+        metaData <<= 240;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(addr);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
+    /// Create an access change that indicates adding run permission to ciphertext, where
+    /// the runner is an ethereum address with a chain ID
+    ///
+    /// @param chainId: the chain ID for the address to allow run
     /// @param addr: the address to add as runner
     /// @param lib: the library (program binary) identifier that the permission applies to
     /// @param prog: the entry point function name that the permission applies to
-    function allowRun(address addr, SpfLibrary lib, SpfProgram prog) internal pure returns (SpfAccessChange memory) {
+    function allowEthRun(uint64 chainId, address addr, SpfLibrary lib, SpfProgram prog)
+        internal
+        pure
+        returns (SpfAccessChange memory)
+    {
         uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
-        metaData <<= 248;
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += chainId;
+        metaData <<= 176;
         bytes32[] memory payload = new bytes32[](3);
         payload[0] = bytes20(addr);
         payload[1] = SpfLibrary.unwrap(lib);
@@ -279,12 +316,50 @@ library Spf {
         return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
-    /// Create an access change that indicates adding decrypt permission to ciphertext.
+    /// Create an access change that indicates adding run permission to ciphertext, where
+    /// the runner is an external address without a chain ID
+    ///
+    /// @param addr: the address to add as runner
+    /// @param lib: the library (program binary) identifier that the permission applies to
+    /// @param prog: the entry point function name that the permission applies to
+    function allowRun(address addr, SpfLibrary lib, SpfProgram prog) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.External);
+        metaData <<= 240;
+        bytes32[] memory payload = new bytes32[](3);
+        payload[0] = bytes20(addr);
+        payload[1] = SpfLibrary.unwrap(lib);
+        payload[2] = SpfProgram.unwrap(prog);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
+    /// Create an access change that indicates adding decrypt permission to ciphertext, where
+    /// the decrypter is an ethereum address with a chain ID
+    ///
+    /// @param chainId: the chain ID for the address to allow decryption
+    /// @param addr: the address to add as decryptor
+    function allowEthDecrypt(uint64 chainId, address addr) internal pure returns (SpfAccessChange memory) {
+        uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += chainId;
+        metaData <<= 176;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(addr);
+        return SpfAccessChange({metaData: metaData, payload: payload});
+    }
+
+    /// Create an access change that indicates adding decrypt permission to ciphertext, where
+    /// the decrypter is an external address without a chain ID
     ///
     /// @param addr: the address to add as decryptor
     function allowDecrypt(address addr) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
-        metaData <<= 248;
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.External);
+        metaData <<= 240;
         bytes32[] memory payload = new bytes32[](1);
         payload[0] = bytes20(addr);
         return SpfAccessChange({metaData: metaData, payload: payload});
