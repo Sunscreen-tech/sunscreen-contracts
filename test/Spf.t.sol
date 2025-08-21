@@ -80,7 +80,8 @@ contract SpfTest is Test {
         Spf.SpfRunHandle returnedHandle = Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
-        bytes32 expectedHash = keccak256(abi.encode(expectedRun));
+        bytes32 expectedHash =
+            keccak256(bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(this))));
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
@@ -156,7 +157,8 @@ contract SpfTest is Test {
         Spf.SpfRunHandle returnedHandle = Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
-        bytes32 expectedHash = keccak256(abi.encode(expectedRun));
+        bytes32 expectedHash =
+            keccak256(bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(this))));
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
@@ -202,7 +204,7 @@ contract SpfTest is Test {
         assertEq(Spf.getOutputHandle(TC.SPF_ALT_RUN_HANDLE, 1).payload[0], expectedOutput3);
     }
 
-    function test_outputHash() public pure {
+    function test_outputHash() public view {
         // create sample input parameters
         Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](5);
         parameters[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -220,15 +222,19 @@ contract SpfTest is Test {
 
         bytes memory encoding = abi.encode(run);
         console.logBytes(encoding);
+        bytes8 chainId = bytes8(uint64(block.chainid));
+        console.logBytes8(chainId);
+        bytes20 addr = bytes20(address(this));
+        console.logBytes20(addr);
 
         // Manually calculate the expected hash to compare
-        bytes32 expectedHash = keccak256(abi.encode(run));
+        bytes32 expectedHash = keccak256(bytes.concat(abi.encode(run), chainId, addr));
 
         // Assert that the function returns the expected hash
         assertEq(calculatedHash, expectedHash, "outputHash returned incorrect hash");
     }
 
-    function test_outputHashWithEmptyParameters() public pure {
+    function test_outputHashWithEmptyParameters() public view {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
@@ -240,13 +246,14 @@ contract SpfTest is Test {
         bytes32 calculatedHash = Spf.outputHash(run);
 
         // Manually calculate the expected hash to compare
-        bytes32 expectedHash = keccak256(abi.encode(run));
+        bytes32 expectedHash =
+            keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(address(this))));
 
         // Assert that the function returns the expected hash
         assertEq(calculatedHash, expectedHash, "outputHash with empty parameters returned incorrect hash");
     }
 
-    function test_outputHashDifferentInputsDifferentHashes() public pure {
+    function test_outputHashDifferentInputsDifferentHashes() public view {
         // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
         params1[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
