@@ -381,8 +381,8 @@ library Spf {
     ///
     /// @param run The SpfRun struct containing the program and parameters
     /// @return bytes32 The identifier for a specific run of the SPF program
-    function outputHash(SpfRun memory run) internal pure returns (bytes32) {
-        return keccak256(abi.encode(run));
+    function outputHash(SpfRun memory run) internal view returns (bytes32) {
+        return keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(address(this))));
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with

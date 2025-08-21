@@ -94,7 +94,9 @@ contract TfheThresholdDecryptionTest is Test {
         vm.expectEmit(true, true, true, true);
 
         // Calculate expected output handle
-        Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(keccak256(abi.encode(expectedRun)));
+        Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(
+            keccak256(bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(mockUser))))
+        );
         Spf.SpfParameter memory expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit RequestThresholdDecryption(
@@ -108,7 +110,10 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfRunHandle runHandle = mockUser.executeAndRequestDecryption(inputs);
 
         // Verify returned run handle
-        assertEq(Spf.SpfRunHandle.unwrap(runHandle), keccak256(abi.encode(expectedRun)));
+        assertEq(
+            Spf.SpfRunHandle.unwrap(runHandle),
+            keccak256(bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(mockUser))))
+        );
 
         // Verify that no decryption has been received yet
         assertFalse(mockUser.decryptionReceived());
