@@ -204,7 +204,7 @@ contract SpfTest is Test {
         assertEq(Spf.getOutputHandle(TC.SPF_ALT_RUN_HANDLE, 1).payload[0], expectedOutput3);
     }
 
-    function test_outputHash() public view {
+    function test_getRunHandle() public view {
         // create sample input parameters
         Spf.SpfParameter[] memory parameters = new Spf.SpfParameter[](5);
         parameters[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -217,8 +217,10 @@ contract SpfTest is Test {
         Spf.SpfRun memory run =
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: parameters});
 
-        // Calculate the hash using the library function
-        bytes32 calculatedHash = Spf.outputHash(run);
+        // Calculate the hash using the library function in two ways and make sure they are the same
+        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run));
+        bytes32 anotherCalculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandleWithRunner(run, address(this)));
+        assertEq(calculatedHash, anotherCalculatedHash, "getRunHandleWithRunner returned incorrect hash");
 
         bytes memory encoding = abi.encode(run);
         console.logBytes(encoding);
@@ -231,10 +233,10 @@ contract SpfTest is Test {
         bytes32 expectedHash = keccak256(bytes.concat(abi.encode(run), chainId, addr));
 
         // Assert that the function returns the expected hash
-        assertEq(calculatedHash, expectedHash, "outputHash returned incorrect hash");
+        assertEq(calculatedHash, expectedHash, "getRunHandle returned incorrect hash");
     }
 
-    function test_outputHashWithEmptyParameters() public view {
+    function test_getRunHandleWithEmptyParameters() public view {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
@@ -243,17 +245,17 @@ contract SpfTest is Test {
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: emptyParams});
 
         // Calculate the hash using the library function
-        bytes32 calculatedHash = Spf.outputHash(run);
+        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run));
 
         // Manually calculate the expected hash to compare
         bytes32 expectedHash =
             keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(address(this))));
 
         // Assert that the function returns the expected hash
-        assertEq(calculatedHash, expectedHash, "outputHash with empty parameters returned incorrect hash");
+        assertEq(calculatedHash, expectedHash, "runHandle with empty parameters returned incorrect hash");
     }
 
-    function test_outputHashDifferentInputsDifferentHashes() public view {
+    function test_getRunHandleDifferentInputsDifferentHashes() public view {
         // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
         params1[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -269,8 +271,8 @@ contract SpfTest is Test {
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: params2});
 
         // Get hashes for both runs
-        bytes32 hash1 = Spf.outputHash(run1);
-        bytes32 hash2 = Spf.outputHash(run2);
+        bytes32 hash1 = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run1));
+        bytes32 hash2 = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run2));
 
         // Verify that different inputs produce different hashes
         assertTrue(hash1 != hash2, "Different inputs should produce different hashes");
