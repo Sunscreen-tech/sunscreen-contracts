@@ -217,8 +217,10 @@ contract SpfTest is Test {
         Spf.SpfRun memory run =
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: parameters});
 
-        // Calculate the hash using the library function
+        // Calculate the hash using the library function in two ways and make sure they are the same
         bytes32 calculatedHash = Spf.outputHash(run);
+        bytes32 anotherCalculatedHash = Spf.runHandleHash(run, address(this));
+        assertEq(calculatedHash, anotherCalculatedHash, "runHandleHash returned incorrect hash");
 
         bytes memory encoding = abi.encode(run);
         console.logBytes(encoding);
