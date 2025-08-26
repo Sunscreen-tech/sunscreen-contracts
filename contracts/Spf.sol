@@ -377,24 +377,24 @@ library Spf {
         return param.payload[0];
     }
 
-    /// Generates a unique hash for a specific output value of an SPF program run with a set runner.
+    /// Generates a unique hash for a specific SPF program run with a set runner.
     ///
-    /// @dev This function is mostly useful in testing, you generally want `outputHash` in production.
+    /// @dev This function is mostly useful in testing, you generally want `getRunHandle` in production.
     ///
     /// @param run The SpfRun struct containing the program and parameters
     /// @param runner The contract that runs the program
     /// @return bytes32 The identifier for a specific run of the SPF program by runner
-    function runHandleHash(SpfRun memory run, address runner) internal view returns (bytes32) {
-        return keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(runner)));
+    function getRunHandleWithRunner(SpfRun memory run, address runner) internal view returns (SpfRunHandle) {
+        return
+            SpfRunHandle.wrap(keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(runner))));
     }
 
-    /// Generates a unique hash for a specific output value of an SPF program run with this contract
-    /// as the runner.
+    /// Generates a unique hash for a specific SPF program run with this contract as the runner.
     ///
     /// @param run The SpfRun struct containing the program and parameters by this contract
     /// @return bytes32 The identifier for a specific run of the SPF program
-    function outputHash(SpfRun memory run) internal view returns (bytes32) {
-        return runHandleHash(run, address(this));
+    function getRunHandle(SpfRun memory run) internal view returns (SpfRunHandle) {
+        return getRunHandleWithRunner(run, address(this));
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with
@@ -436,11 +436,11 @@ library Spf {
         SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: inputs});
 
         // Get hash of this struct
-        bytes32 runHash = outputHash(run);
+        SpfRunHandle runHandle = getRunHandle(run);
 
         emit RunProgramOnSpf(msg.sender, run);
 
-        return SpfRunHandle.wrap(runHash);
+        return runHandle;
     }
 
     function requestAcl(SpfCiphertextIdentifier ciphertext, SpfAccessChange[] memory changes)
