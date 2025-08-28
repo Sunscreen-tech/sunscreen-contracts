@@ -60,6 +60,12 @@ library Spf {
         uint8 v;
     }
 
+    struct SpfCiphertextAccessConfirmation {
+        bytes32 ciphertextId;
+        uint8 bitWidth;
+        bytes access;
+    }
+
     struct SpfRun {
         SpfLibrary spfLibrary;
         SpfProgram program;
@@ -99,6 +105,17 @@ library Spf {
     event RunProgramOnSpf(address indexed sender, SpfRun run);
 
     event ChangeAccessOnSpf(address indexed sender, SpfAccess access);
+
+    bytes32 private constant ACCESS_CONFIRMATION_TYPE_HASH =
+        keccak256("SpfCiphertextAccessConfirmation(bytes32 ciphertextId,uint8 bitWidth,bytes access)");
+
+    bytes32 private constant DOMAIN_SEPARATOR = keccak256(
+        abi.encode(
+            keccak256("EIP712Domain(string name,string version)"),
+            keccak256(bytes("SPFServiceAccessConfirmation")),
+            keccak256(bytes("1"))
+        )
+    );
 
     // Trivial encryption has no security so by using the ciphertext identifiers below
     // everyone knows the data you are using, we provide just 0 and 1 here
@@ -173,26 +190,27 @@ library Spf {
             "Given parameter is not a single ciphertext"
         );
 
-        bytes memory message = bytes.concat(
-            bytes1(0x19),
-            bytes("Ethereum Signed Message:"),
-            bytes1(0x0a),
-            bytes("131"), // length for everything below
-            parameter.payload[0], // 32
-            bytes1(bitWidth), // 1
-            bytes1(0x01), // 1, run permission type id
-            bytes1(0x00), // 1, contract address type id
-            bytes4(0x00), // 4, padding for chain id
-            bytes8(uint64(block.chainid)), // 8
-            bytes20(address(this)), // 20
-            SpfLibrary.unwrap(spfLibrary), // 32
-            SpfProgram.unwrap(spfProgram) // 32
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x01), // run permission type id
+                        bytes1(0x00), // contract address type id
+                        bytes4(0x00), // padding for chain id
+                        bytes8(uint64(block.chainid)),
+                        bytes20(address(this)),
+                        SpfLibrary.unwrap(spfLibrary),
+                        SpfProgram.unwrap(spfProgram)
+                    )
+                )
+            )
         );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
 
-        require(
-            ecrecover(sha256(message), sig.v + 27, sig.r, sig.s) == SPF_SERVICE,
-            "Ciphertext is not confirmed by SPF service"
-        );
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
     /// Create a trivial zero ciphertext for the specified bit width.
