@@ -60,6 +60,12 @@ library Spf {
         uint8 v;
     }
 
+    struct SpfCiphertextAccessConfirmation {
+        bytes32 ciphertextId;
+        uint8 bitWidth;
+        bytes access;
+    }
+
     struct SpfRun {
         SpfLibrary spfLibrary;
         SpfProgram program;
@@ -99,6 +105,17 @@ library Spf {
     event RunProgramOnSpf(address indexed sender, SpfRun run);
 
     event ChangeAccessOnSpf(address indexed sender, SpfAccess access);
+
+    bytes32 private constant ACCESS_CONFIRMATION_TYPE_HASH =
+        keccak256("SpfCiphertextAccessConfirmation(bytes32 ciphertextId,uint8 bitWidth,bytes access)");
+
+    bytes32 private constant DOMAIN_SEPARATOR = keccak256(
+        abi.encode(
+            keccak256("EIP712Domain(string name,string version)"),
+            keccak256(bytes("SPFServiceAccessConfirmation")),
+            keccak256(bytes("1"))
+        )
+    );
 
     // Trivial encryption has no security so by using the ciphertext identifiers below
     // everyone knows the data you are using, we provide just 0 and 1 here
@@ -154,11 +171,186 @@ library Spf {
         return SpfParameterSignature({r: r, s: s, v: v});
     }
 
-    /// Verify if a parameter with given bit width has upload confirmation by the SPF service
+    /// Verify if SPF service confirms a parameter with given bit width is owned by given wallet address
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
-    /// @param sig the signature for the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param externalOwner the owner to be verified
+    function verifyCiphertextOwnedExternal(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address externalOwner
+    ) internal pure {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x00), // admin (owner) permission type id
+                        bytes1(0x01), // external address type id
+                        bytes12(0x00), // padding
+                        bytes20(externalOwner)
+                    )
+                )
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is owned by given contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param contractOwner the owner to be verified
+    function verifyCiphertextOwnedContract(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address contractOwner
+    ) internal view {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x00), // admin (owner) permission type id
+                        bytes1(0x00), // contract address type id
+                        bytes4(0x00), // padding for chain id
+                        bytes8(uint64(block.chainid)),
+                        bytes12(0x00), // padding
+                        bytes20(contractOwner)
+                    )
+                )
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is owned by calling contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    function verifyCiphertextOwned(SpfParameter memory parameter, uint8 bitWidth, SpfParameterSignature memory sig)
+        internal
+        view
+    {
+        verifyCiphertextOwnedContract(parameter, bitWidth, sig, address(this));
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is runnable by given wallet address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param externalRunner the runner to be verified
+    /// @param spfLibrary the library to run on this ciphertext
+    /// @param spfProgram the program in above library to run on this ciphertext
+    function verifyCiphertextRunnableExternal(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address externalRunner,
+        SpfLibrary spfLibrary,
+        SpfProgram spfProgram
+    ) internal pure {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x01), // run permission type id
+                        bytes1(0x01), // external address type id
+                        bytes12(0x00), // padding
+                        bytes20(externalRunner),
+                        SpfLibrary.unwrap(spfLibrary),
+                        SpfProgram.unwrap(spfProgram)
+                    )
+                )
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is runnable by given contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param contractRunner the runner to be verified
+    /// @param spfLibrary the library to run on this ciphertext
+    /// @param spfProgram the program in above library to run on this ciphertext
+    function verifyCiphertextRunnableContract(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address contractRunner,
+        SpfLibrary spfLibrary,
+        SpfProgram spfProgram
+    ) internal view {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x01), // run permission type id
+                        bytes1(0x00), // contract address type id
+                        bytes4(0x00), // padding for chain id
+                        bytes8(uint64(block.chainid)),
+                        bytes20(contractRunner),
+                        SpfLibrary.unwrap(spfLibrary),
+                        SpfProgram.unwrap(spfProgram)
+                    )
+                )
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is runnable by calling contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
     /// @param spfLibrary the library to run on this ciphertext
     /// @param spfProgram the program in above library to run on this ciphertext
     function verifyCiphertextRunnable(
@@ -168,31 +360,95 @@ library Spf {
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
     ) internal view {
+        verifyCiphertextRunnableContract(parameter, bitWidth, sig, address(this), spfLibrary, spfProgram);
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is decryptable by given wallet address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param externalDecrypter the decrypter to be verified
+    function verifyCiphertextDecryptableExternal(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address externalDecrypter
+    ) internal pure {
         require(
             parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
             "Given parameter is not a single ciphertext"
         );
 
-        bytes memory message = bytes.concat(
-            bytes1(0x19),
-            bytes("Ethereum Signed Message:"),
-            bytes1(0x0a),
-            bytes("131"), // length for everything below
-            parameter.payload[0], // 32
-            bytes1(bitWidth), // 1
-            bytes1(0x01), // 1, run permission type id
-            bytes1(0x00), // 1, contract address type id
-            bytes4(0x00), // 4, padding for chain id
-            bytes8(uint64(block.chainid)), // 8
-            bytes20(address(this)), // 20
-            SpfLibrary.unwrap(spfLibrary), // 32
-            SpfProgram.unwrap(spfProgram) // 32
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x02), // decrypt permission type id
+                        bytes1(0x01), // external address type id
+                        bytes12(0x00), // padding
+                        bytes20(externalDecrypter)
+                    )
+                )
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is decryptable by given contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    /// @param contractDecrypter the decrypter to be verified
+    function verifyCiphertextDecryptableContract(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        address contractDecrypter
+    ) internal view {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
         );
 
-        require(
-            ecrecover(sha256(message), sig.v + 27, sig.r, sig.s) == SPF_SERVICE,
-            "Ciphertext is not confirmed by SPF service"
+        bytes32 hashStruct = keccak256(
+            abi.encode(
+                ACCESS_CONFIRMATION_TYPE_HASH,
+                parameter.payload[0],
+                bitWidth,
+                keccak256(
+                    bytes.concat(
+                        bytes1(0x02), // decrypt permission type id
+                        bytes1(0x00), // contract address type id
+                        bytes4(0x00), // padding for chain id
+                        bytes8(uint64(block.chainid)),
+                        bytes20(contractDecrypter)
+                    )
+                )
+            )
         );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashStruct));
+
+        require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
+    }
+
+    /// Verify if SPF service confirms a parameter with given bit width is decryptable by calling contract address
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the confirmation signature by SPF service
+    function verifyCiphertextDecryptable(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig
+    ) internal view {
+        verifyCiphertextDecryptableContract(parameter, bitWidth, sig, address(this));
     }
 
     /// Create a trivial zero ciphertext for the specified bit width.
