@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 // Library contract that emits events for decryption, using a callback function to handle the decryption result
 library Spf {
+    address public constant SPF_SERVICE = 0xa4723A446A80516d77D67B61b2911039a7e165b5;
+
     type SpfLibrary is bytes32;
     type SpfProgram is bytes32;
     type SpfCiphertextIdentifier is bytes32;
@@ -50,6 +52,12 @@ library Spf {
     struct SpfParameter {
         uint256 metaData;
         bytes32[] payload;
+    }
+
+    struct SpfParameterSignature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
     }
 
     struct SpfRun {
@@ -126,6 +134,66 @@ library Spf {
     /// Trivial ciphertext encoding the value 1 with 64 bits
     SpfCiphertextIdentifier constant TRIVIAL_ONE_64_BIT =
         SpfCiphertextIdentifier.wrap(0x0d7e18449071e3683ef83b234781f2657ef8f840974d7f8c8e1101d997fbcb8f);
+
+    /// Create a signature structure from signature raw bytes
+    ///
+    /// @param sig the signature raw bytes
+    /// @return SpfParameterSignature the signature structure
+    function createSignatureStruct(bytes memory sig) internal pure returns (SpfParameterSignature memory) {
+        require(sig.length == 65, "The signature raw bytes must be 65 in length");
+
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
+
+        return SpfParameterSignature({r: r, s: s, v: v});
+    }
+
+    /// Verify if a parameter with given bit width has upload confirmation by the SPF service
+    ///
+    /// @param parameter the parameter to verify
+    /// @param bitWidth the bit width of the parameter
+    /// @param sig the signature for the parameter
+    /// @param spfLibrary the library to run on this ciphertext
+    /// @param spfProgram the program in above library to run on this ciphertext
+    function verifyCiphertextRunnable(
+        SpfParameter memory parameter,
+        uint8 bitWidth,
+        SpfParameterSignature memory sig,
+        SpfLibrary spfLibrary,
+        SpfProgram spfProgram
+    ) internal view {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+
+        bytes memory message = bytes.concat(
+            bytes1(0x19),
+            bytes("Ethereum Signed Message:"),
+            bytes1(0x0a),
+            bytes("131"), // length for everything below
+            parameter.payload[0], // 32
+            bytes1(bitWidth), // 1
+            bytes1(0x01), // 1, run permission type id
+            bytes1(0x00), // 1, contract address type id
+            bytes4(0x00), // 4, padding for chain id
+            bytes8(uint64(block.chainid)), // 8
+            bytes20(address(this)), // 20
+            SpfLibrary.unwrap(spfLibrary), // 32
+            SpfProgram.unwrap(spfProgram) // 32
+        );
+
+        require(
+            ecrecover(sha256(message), sig.v + 27, sig.r, sig.s) == SPF_SERVICE,
+            "Ciphertext is not confirmed by SPF service"
+        );
+    }
 
     /// Create a trivial zero ciphertext for the specified bit width.
     function createTrivialZeroCiphertextParameter(uint8 bitWidth) internal pure returns (SpfParameter memory) {
