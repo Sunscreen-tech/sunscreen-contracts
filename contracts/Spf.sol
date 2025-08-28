@@ -175,7 +175,7 @@ library Spf {
 
         bytes memory message = bytes.concat(
             bytes1(0x19),
-            bytes("Ethereum Signed Message"),
+            bytes("Ethereum Signed Message:"),
             bytes1(0x0a),
             bytes("131"), // length for everything below
             parameter.payload[0], // 32
@@ -190,7 +190,7 @@ library Spf {
         );
 
         require(
-            ecrecover(keccak256(message), sig.v, sig.r, sig.s) == SPF_SERVICE,
+            ecrecover(sha256(message), sig.v + 27, sig.r, sig.s) == SPF_SERVICE,
             "Ciphertext is not confirmed by SPF service"
         );
     }
