@@ -760,20 +760,18 @@ library Spf {
     ///        allowDecrypt() (or their Eth variants) to create these changes.
     ///        Must contain at least one change or the function will revert.
     ///
-    /// @return SpfCiphertextIdentifier A unique identifier representing this ACL
-    ///         change request, computed as keccak256(abi.encode(SpfAccess)).
-    ///         This identifier can be used to reference or verify the ACL update
-    ///         operation, though the actual ciphertext ID remains unchanged.
+    /// @return SpfParameter A unique ciphertext with the new ACL as requested.
+    ///         The actual ciphertext content remains unchanged.
     ///
     /// @custom:example
     /// ```solidity
     /// // Grant multiple permissions to a ciphertext
     /// Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](2);
-    /// changes[0] = Spf.allowRun(contractAddress, library, program);
+    /// changes[0] = Spf.allowEthRun(contractAddress, library, program);
     /// changes[1] = Spf.allowDecrypt(userAddress);
     ///
     /// // Assume an existing SpfParameter `ciphertext` representing a single ciphertext.
-    /// Spf.SpfParameter memory newCiphertextId = Spf.requestAcl(ciphertext, changes);
+    /// Spf.SpfParameter memory newSpfParameter = Spf.requestAcl(ciphertext, changes);
     /// ```
     ///
     /// @custom:emits ChangeAccessOnSpf(msg.sender, SpfAccess) Contains the ciphertext
