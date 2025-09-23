@@ -322,11 +322,12 @@ contract SpfTest is Test {
         emit ChangeAccessOnSpf(msg.sender, expectedAccess);
 
         // Call the function
-        Spf.SpfCiphertextIdentifier returnedHandle = Spf.requestAcl(TC.CIPHERTEXT_ID_1, changes);
+        Spf.SpfParameter memory returnedHandle =
+            Spf.requestAcl(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedAccess));
-        assertEq(Spf.SpfCiphertextIdentifier.unwrap(returnedHandle), expectedHash);
+        assertEq(returnedHandle.payload[0], expectedHash);
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
@@ -336,7 +337,7 @@ contract SpfTest is Test {
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No changes specified");
-        Spf.requestAcl(TC.CIPHERTEXT_ID_1, changes);
+        Spf.requestAcl(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
     }
 
     function test_outputCiphertextIdentifierDifferentInputsDifferentChanges() public pure {
