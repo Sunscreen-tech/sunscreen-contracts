@@ -152,6 +152,17 @@ library Spf {
     SpfCiphertextIdentifier constant TRIVIAL_ONE_64_BIT =
         SpfCiphertextIdentifier.wrap(0x0d7e18449071e3683ef83b234781f2657ef8f840974d7f8c8e1101d997fbcb8f);
 
+    /// Modifier that checks that the parameter is a single ciphertext
+    ///
+    /// @param parameter the parameter to check
+    modifier onlySingleCiphertext(SpfParameter memory parameter) {
+        require(
+            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
+            "Given parameter is not a single ciphertext"
+        );
+        _;
+    }
+
     /// Create a signature structure from signature raw bytes
     ///
     /// @param sig the signature raw bytes
@@ -182,12 +193,7 @@ library Spf {
         uint8 bitWidth,
         SpfParameterSignature memory sig,
         address externalOwner
-    ) internal pure {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal pure onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -219,12 +225,7 @@ library Spf {
         uint8 bitWidth,
         SpfParameterSignature memory sig,
         address contractOwner
-    ) internal view {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal view onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -274,12 +275,7 @@ library Spf {
         address externalRunner,
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
-    ) internal pure {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal pure onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -317,12 +313,7 @@ library Spf {
         address contractRunner,
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
-    ) internal view {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal view onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -374,12 +365,7 @@ library Spf {
         uint8 bitWidth,
         SpfParameterSignature memory sig,
         address externalDecrypter
-    ) internal pure {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal pure onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -411,12 +397,7 @@ library Spf {
         uint8 bitWidth,
         SpfParameterSignature memory sig,
         address contractDecrypter
-    ) internal view {
-        require(
-            parameter.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && parameter.payload.length == 1,
-            "Given parameter is not a single ciphertext"
-        );
-
+    ) internal view onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
                 ACCESS_CONFIRMATION_TYPE_HASH,
@@ -693,11 +674,7 @@ library Spf {
     ///
     /// @param param The SpfParameter returned from `getOutputHandle`
     /// @return bytes32 The identifier for decryption service to use
-    function passToDecryption(SpfParameter memory param) internal pure returns (bytes32) {
-        require(
-            param.metaData == uint256(uint8(SpfParameterType.Ciphertext)) << 248 && param.payload.length == 1,
-            "SPF: Param is not an output handle"
-        );
+    function passToDecryption(SpfParameter memory param) internal pure onlySingleCiphertext(param) returns (bytes32) {
         return param.payload[0];
     }
 
@@ -767,21 +744,58 @@ library Spf {
         return runHandle;
     }
 
-    function requestAcl(SpfCiphertextIdentifier ciphertext, SpfAccessChange[] memory changes)
+    /// Requests changes to the access control list (ACL) of a specific ciphertext.
+    ///
+    /// @dev This function emits a ChangeAccessOnSpf event that triggers ACL updates
+    ///      for the specified ciphertext by the off-chain SPF service. The returned
+    ///      value is the identifier for the new ciphertext with the requested ACL
+    ///      changes.
+    ///
+    /// @param ciphertext A single ciphertext parameter whose ACL will be modified.
+    ///        The function will revert if this is not a single ciphertext (e.g.,
+    ///        arrays or other parameter types).
+    /// @param changes Array of access control changes to apply to the ciphertext.
+    ///        Can include adding admins, granting run permissions, or allowing
+    ///        decryption. Use helper functions like addAdmin(), allowRun(), and
+    ///        allowDecrypt() (or their Eth variants) to create these changes.
+    ///        Must contain at least one change or the function will revert.
+    ///
+    /// @return SpfParameter A unique ciphertext with the new ACL as requested.
+    ///         The actual ciphertext content remains unchanged.
+    ///
+    /// @custom:example
+    /// ```solidity
+    /// // Grant multiple permissions to a ciphertext
+    /// Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](2);
+    /// changes[0] = Spf.allowEthRun(contractAddress, library, program);
+    /// changes[1] = Spf.allowDecrypt(userAddress);
+    ///
+    /// // Assume an existing SpfParameter `ciphertext` representing a single ciphertext.
+    /// Spf.SpfParameter memory newSpfParameter = Spf.requestAcl(ciphertext, changes);
+    /// ```
+    ///
+    /// @custom:emits ChangeAccessOnSpf(msg.sender, SpfAccess) Contains the ciphertext
+    ///               ID and all requested ACL changes for off-chain processing
+    /// @custom:reverts "Given parameter is not a single ciphertext" if the parameter
+    ///                 is not a single ciphertext type
+    /// @custom:reverts "SPF: No changes specified" if the changes array is empty
+    function requestAcl(SpfParameter memory ciphertext, SpfAccessChange[] memory changes)
         internal
-        returns (SpfCiphertextIdentifier)
+        onlySingleCiphertext(ciphertext)
+        returns (SpfParameter memory)
     {
+        SpfCiphertextIdentifier cid = SpfCiphertextIdentifier.wrap(ciphertext.payload[0]);
         // Require at least one change
         require(changes.length > 0, "SPF: No changes specified");
 
-        SpfAccess memory acc = SpfAccess({ciphertext: ciphertext, changes: changes});
+        SpfAccess memory acc = SpfAccess({ciphertext: cid, changes: changes});
 
         // Get hash of this struct
         bytes32 accHash = keccak256(abi.encode(acc));
 
         emit ChangeAccessOnSpf(msg.sender, acc);
 
-        return SpfCiphertextIdentifier.wrap(accHash);
+        return createCiphertextParameter(SpfCiphertextIdentifier.wrap(accHash));
     }
 
     /// Generates a unique ciphertext identifier for a specific output from an
