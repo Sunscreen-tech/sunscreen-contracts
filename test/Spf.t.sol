@@ -53,7 +53,7 @@ contract SpfTest is Test {
         );
     }
 
-    function test_RequestSpf_EmitsEvent() public {
+    function test_RequestRun_EmitsEvent() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
         inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -77,7 +77,7 @@ contract SpfTest is Test {
         emit RunProgramOnSpf(msg.sender, expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -85,30 +85,43 @@ contract SpfTest is Test {
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
+    function test_RequestRun_RequesterNotAffectingRunHandle() public {
+        // Prepare test data
+        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
+        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        inputs[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
+        inputs[2] = Spf.createOutputCiphertextParameter(32);
+
+        Spf.SpfRunHandle msgSenderRunHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle addrThisRunHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+
+        assertEq(Spf.SpfRunHandle.unwrap(msgSenderRunHandle), Spf.SpfRunHandle.unwrap(addrThisRunHandle));
+    }
+
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_RequestSpf_RequireInputs() public {
+    function test_RequestRun_RequireInputs() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](0);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No inputs provided");
-        Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
     }
 
     // These reverts are expected to be internal, so we allow them in the test configuration
     // See https://getfoundry.sh/misc/v1.0-migration/#expect-revert-cheatcode-disabled-on-internal-calls-by-default
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_RequestSpf_RequireOutputs() public {
+    function test_RequestRun_RequireOutputs() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
         inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
-        Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
     }
 
-    function test_RequestSpf_Parameters() public {
+    function test_RequestRun_Parameters() public {
         // Prepare test data
         Spf.SpfCiphertextIdentifier[] memory identifiers = new Spf.SpfCiphertextIdentifier[](3);
         identifiers[0] = TC.CIPHERTEXT_ID_2;
@@ -154,7 +167,7 @@ contract SpfTest is Test {
         emit RunProgramOnSpf(msg.sender, expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestSpf(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -323,7 +336,7 @@ contract SpfTest is Test {
 
         // Call the function
         Spf.SpfParameter memory returnedHandle =
-            Spf.requestAcl(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
+            Spf.requestAclAsSender(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash = keccak256(abi.encode(expectedAccess));
@@ -337,7 +350,20 @@ contract SpfTest is Test {
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No changes specified");
-        Spf.requestAcl(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
+        Spf.requestAclAsSender(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
+    }
+
+    function test_RequestAcl_RequesterNotAffectingCiphertextId() public {
+        // Prepare test data
+        Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](6);
+        changes[0] = Spf.addEthAdmin(1, TC.ADDRESS_1);
+
+        Spf.SpfParameter memory msgSenderParameter =
+            Spf.requestAclAsSender(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
+        Spf.SpfParameter memory addrThisParameter =
+            Spf.requestAclAsContract(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
+
+        assertEq(msgSenderParameter.payload[0], addrThisParameter.payload[0]);
     }
 
     function test_outputCiphertextIdentifierDifferentInputsDifferentChanges() public pure {

@@ -23,13 +23,13 @@ contract MockDecryptionUser is TfheThresholdDecryption {
     // Function to execute an SPF program and request decryption of its output
     function executeAndRequestDecryption(Spf.SpfParameter[] calldata inputs) external returns (Spf.SpfRunHandle) {
         // Run the SPF program
-        Spf.SpfRunHandle runHandle = Spf.requestSpf(spfLibrary, program, inputs);
+        Spf.SpfRunHandle runHandle = Spf.requestRunAsSender(spfLibrary, program, inputs);
 
         // Get the zeroth output handle
         Spf.SpfParameter memory outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestThresholdDecryption(this.handleDecryptionResult.selector, Spf.passToDecryption(outputHandle));
+        requestDecryptionAsSender(this.handleDecryptionResult.selector, Spf.passToDecryption(outputHandle));
 
         return runHandle;
     }
@@ -52,14 +52,11 @@ contract TfheThresholdDecryptionTest is Test {
     MockDecryptionUser public mockUser;
 
     // Events to test against
-    event RequestThresholdDecryption(
-        address indexed sender,
-        address contractAddress,
-        bytes4 callbackSelector,
-        Spf.SpfCiphertextIdentifier outputHandle
+    event DecryptCiphertextOnSpf(
+        address indexed requester, bytes4 callbackSelector, Spf.SpfCiphertextIdentifier outputHandle
     );
 
-    event RunProgramOnSpf(address indexed sender, Spf.SpfRun run);
+    event RunProgramOnSpf(address indexed requester, Spf.SpfRun run);
 
     function setUp() public {
         // Deploy the mock user contract
@@ -90,7 +87,7 @@ contract TfheThresholdDecryptionTest is Test {
 
         emit RunProgramOnSpf(address(this), expectedRun);
 
-        // Also expect RequestThresholdDecryption event
+        // Also expect DecryptCiphertextOnSpf event
         vm.expectEmit(true, true, true, true);
 
         // Calculate expected output handle
@@ -99,9 +96,8 @@ contract TfheThresholdDecryptionTest is Test {
         );
         Spf.SpfParameter memory expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
-        emit RequestThresholdDecryption(
+        emit DecryptCiphertextOnSpf(
             address(this),
-            address(mockUser),
             MockDecryptionUser.handleDecryptionResult.selector,
             Spf.SpfCiphertextIdentifier.wrap(expectedOutputHandle.payload[0])
         );
