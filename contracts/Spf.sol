@@ -102,9 +102,9 @@ library Spf {
         SpfAccessChange[] changes;
     }
 
-    event RunProgramOnSpf(address indexed sender, SpfRun run);
+    event RunProgramOnSpf(address indexed requester, SpfRun run);
 
-    event ChangeAccessOnSpf(address indexed sender, SpfAccess access);
+    event ChangeAccessOnSpf(address indexed requester, SpfAccess access);
 
     bytes32 private constant ACCESS_CONFIRMATION_TYPE_HASH =
         keccak256("SpfCiphertextAccessConfirmation(bytes32 ciphertextId,uint8 bitWidth,bytes access)");
@@ -706,6 +706,10 @@ library Spf {
     ///      validates that at least one input is provided and that there is
     ///      at least one parameter that can be used for output.
     ///
+    /// @param requester the entity that initiated the request for permission
+    ///        check purposes, can be either `msg.sender` or `address(this)`,
+    ///        other values are not accepted and cause the execution request
+    ///        to be dismissed
     /// @param spfLibrary The identifier of the SPF library containing the
     ///        program to be executed.
     /// @param program The identifier of the specific program to execute within
@@ -716,7 +720,7 @@ library Spf {
     /// @return SpfRunHandle A unique identifier for this specific program
     ///         execution request that can be used to retrieve results with
     ///         the getOutputHandle function.
-    function requestSpf(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+    function requestRun(address requester, SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
         internal
         returns (SpfRunHandle)
     {
@@ -739,9 +743,31 @@ library Spf {
         // Get hash of this struct
         SpfRunHandle runHandle = getRunHandle(run);
 
-        emit RunProgramOnSpf(msg.sender, run);
+        emit RunProgramOnSpf(requester, run);
 
         return runHandle;
+    }
+
+    /// Requests execution of a Secure Processing Framework (SPF) program with
+    /// the provided parameters with the transaction sender as the requester.
+    ///
+    /// @dev see `requestRun(address, SpfLibrary, SpfProgram, SpfParameter[] memory)`
+    function requestRunAsSender(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+        internal
+        returns (SpfRunHandle)
+    {
+        return requestRun(msg.sender, spfLibrary, program, inputs);
+    }
+
+    /// Requests execution of a Secure Processing Framework (SPF) program with
+    /// the provided parameters with the contract as the requester.
+    ///
+    /// @dev see `requestRun(address, SpfLibrary, SpfProgram, SpfParameter[] memory)`
+    function requestRunAsContract(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+        internal
+        returns (SpfRunHandle)
+    {
+        return requestRun(address(this), spfLibrary, program, inputs);
     }
 
     /// Requests changes to the access control list (ACL) of a specific ciphertext.
@@ -751,6 +777,10 @@ library Spf {
     ///      value is the identifier for the new ciphertext with the requested ACL
     ///      changes.
     ///
+    /// @param requester the entity that initiated the request for permission
+    ///        check purposes, can be either `msg.sender` or `address(this)`,
+    ///        other values are not accepted and cause the ACL change request
+    ///        to be dismissed
     /// @param ciphertext A single ciphertext parameter whose ACL will be modified.
     ///        The function will revert if this is not a single ciphertext (e.g.,
     ///        arrays or other parameter types).
@@ -767,19 +797,19 @@ library Spf {
     /// ```solidity
     /// // Grant multiple permissions to a ciphertext
     /// Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](2);
-    /// changes[0] = Spf.allowEthRun(contractAddress, library, program);
+    /// changes[0] = Spf.allowEthRun(1, contractAddress, library, program);
     /// changes[1] = Spf.allowDecrypt(userAddress);
     ///
     /// // Assume an existing SpfParameter `ciphertext` representing a single ciphertext.
     /// Spf.SpfParameter memory newSpfParameter = Spf.requestAcl(ciphertext, changes);
     /// ```
     ///
-    /// @custom:emits ChangeAccessOnSpf(msg.sender, SpfAccess) Contains the ciphertext
+    /// @custom:emits ChangeAccessOnSpf(address, SpfAccess) Contains the ciphertext
     ///               ID and all requested ACL changes for off-chain processing
     /// @custom:reverts "Given parameter is not a single ciphertext" if the parameter
     ///                 is not a single ciphertext type
     /// @custom:reverts "SPF: No changes specified" if the changes array is empty
-    function requestAcl(SpfParameter memory ciphertext, SpfAccessChange[] memory changes)
+    function requestAcl(address requester, SpfParameter memory ciphertext, SpfAccessChange[] memory changes)
         internal
         onlySingleCiphertext(ciphertext)
         returns (SpfParameter memory)
@@ -793,9 +823,33 @@ library Spf {
         // Get hash of this struct
         bytes32 accHash = keccak256(abi.encode(acc));
 
-        emit ChangeAccessOnSpf(msg.sender, acc);
+        emit ChangeAccessOnSpf(requester, acc);
 
         return createCiphertextParameter(SpfCiphertextIdentifier.wrap(accHash));
+    }
+
+    /// Requests changes to the access control list (ACL) of a specific ciphertext
+    /// with the transaction sender as the requester.
+    ///
+    /// @dev see `requestAcl(address, SpfParameter memory, SpfAccessChange[] memory)`
+    function requestAclAsSender(SpfParameter memory ciphertext, SpfAccessChange[] memory changes)
+        internal
+        onlySingleCiphertext(ciphertext)
+        returns (SpfParameter memory)
+    {
+        return requestAcl(msg.sender, ciphertext, changes);
+    }
+
+    /// Requests changes to the access control list (ACL) of a specific ciphertext
+    /// with the contract as the requester.
+    ///
+    /// @dev see `requestAcl(address, SpfParameter memory, SpfAccessChange[] memory)`
+    function requestAclAsContract(SpfParameter memory ciphertext, SpfAccessChange[] memory changes)
+        internal
+        onlySingleCiphertext(ciphertext)
+        returns (SpfParameter memory)
+    {
+        return requestAcl(address(this), ciphertext, changes);
     }
 
     /// Generates a unique ciphertext identifier for a specific output from an
