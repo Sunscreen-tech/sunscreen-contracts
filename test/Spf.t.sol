@@ -74,10 +74,10 @@ contract SpfTest is Test {
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, true, true);
-        emit RunProgramOnSpf(msg.sender, expectedRun);
+        emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -85,7 +85,7 @@ contract SpfTest is Test {
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
-    function test_RequestRun_RequesterNotAffectingRunHandle() public {
+    function test_RequestRun_RequesterAffectingRunHandle() public {
         // Prepare test data
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
         inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -95,7 +95,7 @@ contract SpfTest is Test {
         Spf.SpfRunHandle msgSenderRunHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
         Spf.SpfRunHandle addrThisRunHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
-        assertEq(Spf.SpfRunHandle.unwrap(msgSenderRunHandle), Spf.SpfRunHandle.unwrap(addrThisRunHandle));
+        assertNotEq(Spf.SpfRunHandle.unwrap(msgSenderRunHandle), Spf.SpfRunHandle.unwrap(addrThisRunHandle));
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
@@ -164,10 +164,10 @@ contract SpfTest is Test {
 
         // Expect the RunProgramOnSpf event with correct parameters
         vm.expectEmit(true, true, true, true);
-        emit RunProgramOnSpf(msg.sender, expectedRun);
+        emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -230,10 +230,10 @@ contract SpfTest is Test {
         Spf.SpfRun memory run =
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: parameters});
 
-        // Calculate the hash using the library function in two ways and make sure they are the same
-        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run));
-        bytes32 anotherCalculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandleWithRunner(run, address(this)));
-        assertEq(calculatedHash, anotherCalculatedHash, "getRunHandleWithRunner returned incorrect hash");
+        // Calculate the hash using the library function
+        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run));
+        bytes32 anotherCalculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandleWithContractRunner(run, address(this)));
+        assertEq(calculatedHash, anotherCalculatedHash, "getRunHandleWithContractRunner returned incorrect hash");
 
         bytes memory encoding = abi.encode(run);
         console.logBytes(encoding);
@@ -258,7 +258,7 @@ contract SpfTest is Test {
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: emptyParams});
 
         // Calculate the hash using the library function
-        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run));
+        bytes32 calculatedHash = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run));
 
         // Manually calculate the expected hash to compare
         bytes32 expectedHash =
@@ -284,8 +284,8 @@ contract SpfTest is Test {
         Spf.SpfRun memory run2 = Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: params2});
 
         // Get hashes for both runs
-        bytes32 hash1 = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run1));
-        bytes32 hash2 = Spf.SpfRunHandle.unwrap(Spf.getRunHandle(run2));
+        bytes32 hash1 = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run1));
+        bytes32 hash2 = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run2));
 
         // Verify that different inputs produce different hashes
         assertTrue(hash1 != hash2, "Different inputs should produce different hashes");
