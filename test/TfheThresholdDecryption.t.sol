@@ -23,13 +23,13 @@ contract MockDecryptionUser is TfheThresholdDecryption {
     // Function to execute an SPF program and request decryption of its output
     function executeAndRequestDecryption(Spf.SpfParameter[] calldata inputs) external returns (Spf.SpfRunHandle) {
         // Run the SPF program
-        Spf.SpfRunHandle runHandle = Spf.requestRunAsSender(spfLibrary, program, inputs);
+        Spf.SpfRunHandle runHandle = Spf.requestRunAsContract(spfLibrary, program, inputs);
 
         // Get the zeroth output handle
         Spf.SpfParameter memory outputHandle = Spf.getOutputHandle(runHandle, 0);
 
         // Request threshold decryption of the output
-        requestDecryptionAsSender(this.handleDecryptionResult.selector, Spf.passToDecryption(outputHandle));
+        requestDecryptionAsContract(this.handleDecryptionResult.selector, Spf.passToDecryption(outputHandle));
 
         return runHandle;
     }
@@ -85,7 +85,7 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfRun memory expectedRun =
             Spf.SpfRun({spfLibrary: mockUser.spfLibrary(), program: mockUser.program(), parameters: expectedParams});
 
-        emit RunProgramOnSpf(address(this), expectedRun);
+        emit RunProgramOnSpf(address(mockUser), expectedRun);
 
         // Also expect DecryptCiphertextOnSpf event
         vm.expectEmit(true, true, true, true);
@@ -97,7 +97,7 @@ contract TfheThresholdDecryptionTest is Test {
         Spf.SpfParameter memory expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit DecryptCiphertextOnSpf(
-            address(this),
+            address(mockUser),
             MockDecryptionUser.handleDecryptionResult.selector,
             Spf.SpfCiphertextIdentifier.wrap(expectedOutputHandle.payload[0])
         );

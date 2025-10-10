@@ -678,24 +678,37 @@ library Spf {
         return param.payload[0];
     }
 
-    /// Generates a unique hash for a specific SPF program run with a set runner.
+    /// Generates a unique hash for a specific SPF program run with a given contract as the runner.
     ///
-    /// @dev This function is mostly useful in testing, you generally want `getRunHandle` in production.
+    /// @dev This function is mostly useful in testing, you generally want `getRunHandleAsContract` in production.
     ///
     /// @param run The SpfRun struct containing the program and parameters
-    /// @param runner The contract that runs the program
+    /// @param contract_runner The contract that runs the program
     /// @return bytes32 The identifier for a specific run of the SPF program by runner
-    function getRunHandleWithRunner(SpfRun memory run, address runner) internal view returns (SpfRunHandle) {
-        return
-            SpfRunHandle.wrap(keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(runner))));
+    function getRunHandleWithContractRunner(SpfRun memory run, address contract_runner)
+        internal
+        view
+        returns (SpfRunHandle)
+    {
+        return SpfRunHandle.wrap(
+            keccak256(bytes.concat(abi.encode(run), bytes8(uint64(block.chainid)), bytes20(contract_runner)))
+        );
     }
 
     /// Generates a unique hash for a specific SPF program run with this contract as the runner.
     ///
     /// @param run The SpfRun struct containing the program and parameters by this contract
     /// @return bytes32 The identifier for a specific run of the SPF program
-    function getRunHandle(SpfRun memory run) internal view returns (SpfRunHandle) {
-        return getRunHandleWithRunner(run, address(this));
+    function getRunHandleAsContract(SpfRun memory run) internal view returns (SpfRunHandle) {
+        return getRunHandleWithContractRunner(run, address(this));
+    }
+
+    /// Generates a unique hash for a specific SPF program run with the transaction sender as the runner.
+    ///
+    /// @param run The SpfRun struct containing the program and parameters by this contract
+    /// @return bytes32 The identifier for a specific run of the SPF program
+    function getRunHandleAsSender(SpfRun memory run) internal view returns (SpfRunHandle) {
+        return SpfRunHandle.wrap(keccak256(bytes.concat(abi.encode(run), bytes20(msg.sender))));
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with
@@ -717,12 +730,10 @@ library Spf {
     /// @param inputs Array of parameters to pass to the program, including both
     ///        input and output parameters.
     ///
-    /// @return SpfRunHandle A unique identifier for this specific program
-    ///         execution request that can be used to retrieve results with
-    ///         the getOutputHandle function.
+    /// @return SpfRun The run object
     function requestRun(address requester, SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
         internal
-        returns (SpfRunHandle)
+        returns (SpfRun memory)
     {
         // Require at least one input
         require(inputs.length > 0, "SPF: No inputs provided");
@@ -740,12 +751,9 @@ library Spf {
 
         SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: inputs});
 
-        // Get hash of this struct
-        SpfRunHandle runHandle = getRunHandle(run);
-
         emit RunProgramOnSpf(requester, run);
 
-        return runHandle;
+        return run;
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with
@@ -756,7 +764,7 @@ library Spf {
         internal
         returns (SpfRunHandle)
     {
-        return requestRun(msg.sender, spfLibrary, program, inputs);
+        return getRunHandleAsSender(requestRun(msg.sender, spfLibrary, program, inputs));
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with
@@ -767,7 +775,7 @@ library Spf {
         internal
         returns (SpfRunHandle)
     {
-        return requestRun(address(this), spfLibrary, program, inputs);
+        return getRunHandleAsContract(requestRun(address(this), spfLibrary, program, inputs));
     }
 
     /// Requests changes to the access control list (ACL) of a specific ciphertext.
