@@ -531,25 +531,27 @@ library Spf {
 
     /// Create a parameter that corresponds to a single plaintext.
     ///
-    /// @param bitWidth The bit width of the plaintext.
-    /// @param value The plaintext value
+    /// @param bitWidth The bit width of the plaintext, must be one of 8, 16, 32, 64
+    /// @param value The plaintext value, every value must be in the range with given bit width
+    ///        for example if bit width is 8, then value must be between -128 to 255 (both ends inclusive)
     /// @return SpfParameter A parameter that corresponds to a single plaintext
-    function createPlaintextParameter(uint8 bitWidth, uint256 value) internal pure returns (SpfParameter memory) {
+    function createPlaintextParameter(uint8 bitWidth, int128 value) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParameterType.Plaintext);
         metaData <<= 8;
         metaData += bitWidth;
         metaData <<= 240;
         bytes32[] memory payload = new bytes32[](1);
-        payload[0] = bytes32(value);
+        payload[0] = bytes32(uint256(uint128(value)));
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
     /// Create a parameter that corresponds to a plaintext array.
     ///
-    /// @param bitWidth: the bit width of the plaintext values
-    /// @param values: the plaintext values
+    /// @param bitWidth: the bit width of the plaintext values, must be one of 8, 16, 32, 64
+    /// @param values: the plaintext values, every value must be in the range with given bit width
+    ///        for example if bit width is 8, then every value must be between -128 to 255 (both ends inclusive)
     /// @return SpfParameter A parameter that corresponds to a plaintext array
-    function createPlaintextArrayParameter(uint8 bitWidth, uint256[] memory values)
+    function createPlaintextArrayParameter(uint8 bitWidth, int128[] memory values)
         internal
         pure
         returns (SpfParameter memory)
@@ -560,7 +562,7 @@ library Spf {
         metaData <<= 240;
         bytes32[] memory payload = new bytes32[](values.length);
         for (uint256 i = 0; i < values.length; i++) {
-            payload[i] = bytes32(values[i]);
+            payload[i] = bytes32(uint256(uint128(values[i])));
         }
         return SpfParameter({metaData: metaData, payload: payload});
     }
