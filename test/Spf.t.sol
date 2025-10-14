@@ -55,10 +55,10 @@ contract SpfTest is Test {
 
     function test_RequestRun_EmitsEvent() public {
         // Prepare test data
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
-        inputs[2] = Spf.createOutputCiphertextParameter(32);
+        Spf.SpfParameter[] memory params = new Spf.SpfParameter[](3);
+        params[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        params[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
+        params[2] = Spf.createOutputCiphertextParameter(32);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](3);
@@ -77,7 +77,7 @@ contract SpfTest is Test {
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -87,25 +87,25 @@ contract SpfTest is Test {
 
     function test_RequestRun_RequesterAffectingRunHandle() public {
         // Prepare test data
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](3);
-        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
-        inputs[2] = Spf.createOutputCiphertextParameter(32);
+        Spf.SpfParameter[] memory params = new Spf.SpfParameter[](3);
+        params[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        params[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
+        params[2] = Spf.createOutputCiphertextParameter(32);
 
-        Spf.SpfRunHandle msgSenderRunHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
-        Spf.SpfRunHandle addrThisRunHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle msgSenderRunHandle = Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
+        Spf.SpfRunHandle addrThisRunHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
 
         assertNotEq(Spf.SpfRunHandle.unwrap(msgSenderRunHandle), Spf.SpfRunHandle.unwrap(addrThisRunHandle));
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_RequestRun_RequireInputs() public {
+    function test_RequestRun_RequireParams() public {
         // Prepare test data
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](0);
+        Spf.SpfParameter[] memory params = new Spf.SpfParameter[](0);
 
         // Expect revert with specific message
-        vm.expectRevert("SPF: No inputs provided");
-        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        vm.expectRevert("SPF: No parameters provided");
+        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
     }
 
     // These reverts are expected to be internal, so we allow them in the test configuration
@@ -113,12 +113,12 @@ contract SpfTest is Test {
     /// forge-config: default.allow_internal_expect_revert = true
     function test_RequestRun_RequireOutputs() public {
         // Prepare test data
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](1);
-        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        Spf.SpfParameter[] memory params = new Spf.SpfParameter[](1);
+        params[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
 
         // Expect revert with specific message
         vm.expectRevert("SPF: No outputs requested");
-        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.requestRunAsSender(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
     }
 
     function test_RequestRun_Parameters() public {
@@ -133,13 +133,13 @@ contract SpfTest is Test {
         values[1] = -3;
         values[2] = 4;
 
-        Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](6);
-        inputs[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
-        inputs[1] = Spf.createCiphertextArrayParameter(identifiers);
-        inputs[2] = Spf.createOutputCiphertextParameter(32);
-        inputs[3] = Spf.createOutputCiphertextArrayParameter(32, 4);
-        inputs[4] = Spf.createPlaintextParameter(32, 1);
-        inputs[5] = Spf.createPlaintextArrayParameter(32, values);
+        Spf.SpfParameter[] memory params = new Spf.SpfParameter[](6);
+        params[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        params[1] = Spf.createCiphertextArrayParameter(identifiers);
+        params[2] = Spf.createOutputCiphertextParameter(32);
+        params[3] = Spf.createOutputCiphertextArrayParameter(32, 4);
+        params[4] = Spf.createPlaintextParameter(32, 1);
+        params[5] = Spf.createPlaintextArrayParameter(32, values);
 
         // Calculate expected parameters
         Spf.SpfParameter[] memory expectedParams = new Spf.SpfParameter[](6);
@@ -167,7 +167,7 @@ contract SpfTest is Test {
         emit RunProgramOnSpf(address(this), expectedRun);
 
         // Call the function
-        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, inputs);
+        Spf.SpfRunHandle returnedHandle = Spf.requestRunAsContract(TC.SPF_LIBRARY, TC.SPF_PROGRAM, params);
 
         // Verify the returned handle matches what we expect
         bytes32 expectedHash =
@@ -253,7 +253,7 @@ contract SpfTest is Test {
         // Create SpfRun struct with empty parameters array
         Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
 
-        // This won't be able to actually run due to number of inputs check, just for testing
+        // This won't be able to actually run due to number of parameters check, just for testing
         Spf.SpfRun memory run =
             Spf.SpfRun({spfLibrary: TC.SPF_LIBRARY, program: TC.SPF_PROGRAM, parameters: emptyParams});
 
@@ -268,7 +268,7 @@ contract SpfTest is Test {
         assertEq(calculatedHash, expectedHash, "runHandle with empty parameters returned incorrect hash");
     }
 
-    function test_getRunHandleDifferentInputsDifferentHashes() public view {
+    function test_getRunHandleDifferentParamsDifferentHashes() public view {
         // create first SpfRun struct
         Spf.SpfParameter[] memory params1 = new Spf.SpfParameter[](2);
         params1[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
@@ -287,8 +287,8 @@ contract SpfTest is Test {
         bytes32 hash1 = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run1));
         bytes32 hash2 = Spf.SpfRunHandle.unwrap(Spf.getRunHandleAsContract(run2));
 
-        // Verify that different inputs produce different hashes
-        assertTrue(hash1 != hash2, "Different inputs should produce different hashes");
+        // Verify that different parameters produce different hashes
+        assertTrue(hash1 != hash2, "Different parameters should produce different hashes");
     }
 
     function test_getOutputHandleMatchesService() public pure {

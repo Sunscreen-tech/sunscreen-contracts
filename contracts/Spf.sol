@@ -718,7 +718,7 @@ library Spf {
     ///
     /// @dev This function emits a RunProgramOnSpf event that triggers execution
     ///      of the specified program by an off-chain SPF service. The function
-    ///      validates that at least one input is provided and that there is
+    ///      validates that at least one parameter is provided and that there is
     ///      at least one parameter that can be used for output.
     ///
     /// @param requester the entity that initiated the request for permission
@@ -729,21 +729,21 @@ library Spf {
     ///        program to be executed.
     /// @param program The identifier of the specific program to execute within
     ///        the library.
-    /// @param inputs Array of parameters to pass to the program, including both
+    /// @param params Array of parameters to pass to the program, including both
     ///        input and output parameters.
     ///
     /// @return SpfRun The run object
-    function requestRun(address requester, SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+    function requestRun(address requester, SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory params)
         internal
         returns (SpfRun memory)
     {
-        // Require at least one input
-        require(inputs.length > 0, "SPF: No inputs provided");
+        // Require at least one parameter
+        require(params.length > 0, "SPF: No parameters provided");
 
         // Make sure we have output, note ciphertext and plaintext arrays can also be used as output
         bool foundOutput = false;
-        for (uint256 i = 0; i < inputs.length; i++) {
-            SpfParameterType parameterType = SpfParameterType(inputs[i].metaData >> 248);
+        for (uint256 i = 0; i < params.length; i++) {
+            SpfParameterType parameterType = SpfParameterType(params[i].metaData >> 248);
             if (parameterType == SpfParameterType.OutputCiphertextArray) {
                 foundOutput = true;
                 break;
@@ -751,7 +751,7 @@ library Spf {
         }
         require(foundOutput, "SPF: No outputs requested");
 
-        SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: inputs});
+        SpfRun memory run = SpfRun({spfLibrary: spfLibrary, program: program, parameters: params});
 
         emit RunProgramOnSpf(requester, run);
 
@@ -762,22 +762,22 @@ library Spf {
     /// the provided parameters with the transaction sender as the requester.
     ///
     /// @dev see `requestRun(address, SpfLibrary, SpfProgram, SpfParameter[] memory)`
-    function requestRunAsSender(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+    function requestRunAsSender(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory params)
         internal
         returns (SpfRunHandle)
     {
-        return getRunHandleAsSender(requestRun(msg.sender, spfLibrary, program, inputs));
+        return getRunHandleAsSender(requestRun(msg.sender, spfLibrary, program, params));
     }
 
     /// Requests execution of a Secure Processing Framework (SPF) program with
     /// the provided parameters with the contract as the requester.
     ///
     /// @dev see `requestRun(address, SpfLibrary, SpfProgram, SpfParameter[] memory)`
-    function requestRunAsContract(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory inputs)
+    function requestRunAsContract(SpfLibrary spfLibrary, SpfProgram program, SpfParameter[] memory params)
         internal
         returns (SpfRunHandle)
     {
-        return getRunHandleAsContract(requestRun(address(this), spfLibrary, program, inputs));
+        return getRunHandleAsContract(requestRun(address(this), spfLibrary, program, params));
     }
 
     /// Requests changes to the access control list (ACL) of a specific ciphertext.
