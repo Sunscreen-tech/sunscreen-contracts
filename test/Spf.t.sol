@@ -128,9 +128,9 @@ contract SpfTest is Test {
         identifiers[1] = TC.CIPHERTEXT_ID_3;
         identifiers[2] = TC.CIPHERTEXT_ID_4;
 
-        uint256[] memory values = new uint256[](3);
+        int128[] memory values = new int128[](3);
         values[0] = 2;
-        values[1] = 3;
+        values[1] = -3;
         values[2] = 4;
 
         Spf.SpfParameter[] memory inputs = new Spf.SpfParameter[](6);
@@ -154,9 +154,9 @@ contract SpfTest is Test {
         expectedParams[4] = Spf.SpfParameter({metaData: 0x0320 << 240, payload: new bytes32[](1)});
         expectedParams[4].payload[0] = bytes32(uint256(1));
         expectedParams[5] = Spf.SpfParameter({metaData: 0x0420 << 240, payload: new bytes32[](3)});
-        expectedParams[5].payload[0] = bytes32(values[0]);
-        expectedParams[5].payload[1] = bytes32(values[1]);
-        expectedParams[5].payload[2] = bytes32(values[2]);
+        expectedParams[5].payload[0] = bytes32(uint256(uint128(values[0])));
+        expectedParams[5].payload[1] = bytes32(uint256(uint128(values[1])));
+        expectedParams[5].payload[2] = bytes32(uint256(uint128(values[2])));
 
         // create the expected SpfRun struct
         Spf.SpfRun memory expectedRun =
