@@ -182,17 +182,17 @@ library Spf {
         return SpfParameterSignature({r: r, s: s, v: v});
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is owned by given wallet address
+    /// Verify if SPF service confirms a given parameter with given bit width is owned by a given signer
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param externalOwner the owner to be verified
-    function verifyCiphertextOwnedExternal(
+    /// @param signerAddress the signer address to be verified
+    function verifyCiphertextOwnedBySigner(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address externalOwner
+        address signerAddress
     ) internal pure onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
@@ -204,7 +204,7 @@ library Spf {
                         bytes1(0x00), // admin (owner) permission type id
                         bytes1(0x01), // external address type id
                         bytes12(0x00), // padding
-                        bytes20(externalOwner)
+                        bytes20(signerAddress)
                     )
                 )
             )
@@ -214,17 +214,18 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is owned by given contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is owned by a given contract
+    /// on the current chain
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param contractOwner the owner to be verified
-    function verifyCiphertextOwnedContract(
+    /// @param contractAddress the contract address to be verified
+    function verifyCiphertextOwnedByContract(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address contractOwner
+        address contractAddress
     ) internal view onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
@@ -238,7 +239,7 @@ library Spf {
                         bytes4(0x00), // padding for chain id
                         bytes8(uint64(block.chainid)),
                         bytes12(0x00), // padding
-                        bytes20(contractOwner)
+                        bytes20(contractAddress)
                     )
                 )
             )
@@ -248,7 +249,7 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is owned by calling contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is owned by the current contract
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
@@ -257,22 +258,22 @@ library Spf {
         internal
         view
     {
-        verifyCiphertextOwnedContract(parameter, bitWidth, sig, address(this));
+        verifyCiphertextOwnedByContract(parameter, bitWidth, sig, address(this));
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is runnable by given wallet address
+    /// Verify if SPF service confirms a given parameter with given bit width is runnable by a given signer
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param externalRunner the runner to be verified
+    /// @param signerAddress the signer address to be verified
     /// @param spfLibrary the library to run on this ciphertext
     /// @param spfProgram the program in above library to run on this ciphertext
-    function verifyCiphertextRunnableExternal(
+    function verifyCiphertextRunnableBySigner(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address externalRunner,
+        address signerAddress,
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
     ) internal pure onlySingleCiphertext(parameter) {
@@ -286,7 +287,7 @@ library Spf {
                         bytes1(0x01), // run permission type id
                         bytes1(0x01), // external address type id
                         bytes12(0x00), // padding
-                        bytes20(externalRunner),
+                        bytes20(signerAddress),
                         SpfLibrary.unwrap(spfLibrary),
                         SpfProgram.unwrap(spfProgram)
                     )
@@ -298,19 +299,20 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is runnable by given contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is runnable by a given contract
+    /// on the current chain
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param contractRunner the runner to be verified
+    /// @param contractAddress the contract address to be verified
     /// @param spfLibrary the library to run on this ciphertext
     /// @param spfProgram the program in above library to run on this ciphertext
-    function verifyCiphertextRunnableContract(
+    function verifyCiphertextRunnableByContract(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address contractRunner,
+        address contractAddress,
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
     ) internal view onlySingleCiphertext(parameter) {
@@ -325,7 +327,7 @@ library Spf {
                         bytes1(0x00), // contract address type id
                         bytes4(0x00), // padding for chain id
                         bytes8(uint64(block.chainid)),
-                        bytes20(contractRunner),
+                        bytes20(contractAddress),
                         SpfLibrary.unwrap(spfLibrary),
                         SpfProgram.unwrap(spfProgram)
                     )
@@ -337,7 +339,7 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is runnable by calling contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is runnable by the current contract
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
@@ -351,20 +353,20 @@ library Spf {
         SpfLibrary spfLibrary,
         SpfProgram spfProgram
     ) internal view {
-        verifyCiphertextRunnableContract(parameter, bitWidth, sig, address(this), spfLibrary, spfProgram);
+        verifyCiphertextRunnableByContract(parameter, bitWidth, sig, address(this), spfLibrary, spfProgram);
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is decryptable by given wallet address
+    /// Verify if SPF service confirms a given parameter with given bit width is decryptable by a given signer
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param externalDecrypter the decrypter to be verified
-    function verifyCiphertextDecryptableExternal(
+    /// @param signerAddress the signer address to be verified
+    function verifyCiphertextDecryptableBySigner(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address externalDecrypter
+        address signerAddress
     ) internal pure onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
@@ -376,7 +378,7 @@ library Spf {
                         bytes1(0x02), // decrypt permission type id
                         bytes1(0x01), // external address type id
                         bytes12(0x00), // padding
-                        bytes20(externalDecrypter)
+                        bytes20(signerAddress)
                     )
                 )
             )
@@ -386,17 +388,17 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is decryptable by given contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is decryptable by given contract
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
     /// @param sig the confirmation signature by SPF service
-    /// @param contractDecrypter the decrypter to be verified
-    function verifyCiphertextDecryptableContract(
+    /// @param contractAddress the contract address to be verified
+    function verifyCiphertextDecryptableByContract(
         SpfParameter memory parameter,
         uint8 bitWidth,
         SpfParameterSignature memory sig,
-        address contractDecrypter
+        address contractAddress
     ) internal view onlySingleCiphertext(parameter) {
         bytes32 hashStruct = keccak256(
             abi.encode(
@@ -409,7 +411,7 @@ library Spf {
                         bytes1(0x00), // contract address type id
                         bytes4(0x00), // padding for chain id
                         bytes8(uint64(block.chainid)),
-                        bytes20(contractDecrypter)
+                        bytes20(contractAddress)
                     )
                 )
             )
@@ -419,7 +421,7 @@ library Spf {
         require(ecrecover(digest, sig.v, sig.r, sig.s) == SPF_SERVICE, "Ciphertext is not confirmed by SPF service");
     }
 
-    /// Verify if SPF service confirms a parameter with given bit width is decryptable by calling contract address
+    /// Verify if SPF service confirms a given parameter with given bit width is decryptable by the current contract
     ///
     /// @param parameter the parameter to verify
     /// @param bitWidth the bit width of the parameter
@@ -429,7 +431,7 @@ library Spf {
         uint8 bitWidth,
         SpfParameterSignature memory sig
     ) internal view {
-        verifyCiphertextDecryptableContract(parameter, bitWidth, sig, address(this));
+        verifyCiphertextDecryptableByContract(parameter, bitWidth, sig, address(this));
     }
 
     /// Create a trivial zero ciphertext for the specified bit width.
