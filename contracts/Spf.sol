@@ -466,11 +466,7 @@ library Spf {
     ///
     /// @param identifier The ciphertext identifier
     /// @return SpfParameter A parameter that corresponds to a single ciphertext
-    function createCiphertextParameter(SpfCiphertextIdentifier identifier)
-        internal
-        pure
-        returns (SpfParameter memory)
-    {
+    function createCiphertextParameter(SpfCiphertextIdentifier identifier) internal pure returns (SpfParameter memory) {
         uint256 metaData = uint8(SpfParameterType.Ciphertext);
         metaData <<= 248;
         bytes32[] memory payload = new bytes32[](1);

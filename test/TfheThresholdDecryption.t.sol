@@ -91,9 +91,12 @@ contract TfheThresholdDecryptionTest is Test {
         vm.expectEmit(true, true, true, true);
 
         // Calculate expected output handle
-        Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle.wrap(
-            keccak256(bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(mockUser))))
-        );
+        Spf.SpfRunHandle expectedRunHandle = Spf.SpfRunHandle
+            .wrap(
+                keccak256(
+                    bytes.concat(abi.encode(expectedRun), bytes8(uint64(block.chainid)), bytes20(address(mockUser)))
+                )
+            );
         Spf.SpfParameter memory expectedOutputHandle = Spf.getOutputHandle(expectedRunHandle, 0);
 
         emit DecryptCiphertextOnSpf(
