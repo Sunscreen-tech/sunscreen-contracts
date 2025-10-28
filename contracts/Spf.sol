@@ -870,6 +870,19 @@ library Spf {
         return Spf.requestAclAsSender(ciphertext, accessChanges);
     }
 
+    /// Requests to allow the given signer to decrypt the ciphertext with the current contract
+    /// as the requester.
+    ///
+    /// @dev see `prepareSignerDecryptAccess` and `requestAclAsContract`
+    function contractAllowSignerDecrypt(SpfParameter memory ciphertext, address signer)
+        internal
+        returns (SpfParameter memory)
+    {
+        Spf.SpfAccessChange[] memory accessChanges = new Spf.SpfAccessChange[](1);
+        accessChanges[0] = Spf.prepareSignerDecryptAccess(signer);
+        return Spf.requestAclAsContract(ciphertext, accessChanges);
+    }
+
     /// Generates a unique ciphertext identifier for a specific output from an
     /// SPF program execution
     ///
