@@ -301,12 +301,12 @@ contract SpfTest is Test {
     function test_RequestAcl_EmitsEvent_And_Parameters() public {
         // Prepare test data
         Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](6);
-        changes[0] = Spf.addContractAsAdmin(TC.ADDRESS_1);
-        changes[1] = Spf.addSignerAsAdmin(TC.ADDRESS_1);
-        changes[2] = Spf.allowContractRun(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes[3] = Spf.allowSignerRun(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes[4] = Spf.allowContractDecrypt(TC.ADDRESS_3);
-        changes[5] = Spf.allowSignerDecrypt(TC.ADDRESS_3);
+        changes[0] = Spf.prepareContractAdminAccess(TC.ADDRESS_1);
+        changes[1] = Spf.prepareSignerAdminAccess(TC.ADDRESS_1);
+        changes[2] = Spf.prepareContractRunAccess(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes[3] = Spf.prepareSignerRunAccess(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes[4] = Spf.prepareContractDecryptAccess(TC.ADDRESS_3);
+        changes[5] = Spf.prepareSignerDecryptAccess(TC.ADDRESS_3);
 
         // Calculate expected parameters
         Spf.SpfAccessChange[] memory expectedChanges = new Spf.SpfAccessChange[](6);
@@ -358,7 +358,7 @@ contract SpfTest is Test {
     function test_RequestAcl_RequesterNotAffectingCiphertextId() public {
         // Prepare test data
         Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](6);
-        changes[0] = Spf.addContractAsAdmin(TC.ADDRESS_1);
+        changes[0] = Spf.prepareContractAdminAccess(TC.ADDRESS_1);
 
         Spf.SpfParameter memory msgSenderParameter =
             Spf.requestAclAsSender(Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1), changes);
@@ -371,15 +371,15 @@ contract SpfTest is Test {
     function test_outputCiphertextIdentifierDifferentInputsDifferentChanges() public view {
         // create first SpfAccess struct
         Spf.SpfAccessChange[] memory changes1 = new Spf.SpfAccessChange[](2);
-        changes1[0] = Spf.allowContractRun(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes1[1] = Spf.allowContractDecrypt(TC.ADDRESS_2);
+        changes1[0] = Spf.prepareContractRunAccess(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes1[1] = Spf.prepareContractDecryptAccess(TC.ADDRESS_2);
 
         Spf.SpfAccess memory access1 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes1});
 
         // create second SpfAccess struct with slightly different parameters
         Spf.SpfAccessChange[] memory changes2 = new Spf.SpfAccessChange[](2);
-        changes2[0] = Spf.allowContractRun(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes2[1] = Spf.allowContractDecrypt(TC.ADDRESS_3); // different value
+        changes2[0] = Spf.prepareContractRunAccess(TC.ADDRESS_1, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes2[1] = Spf.prepareContractDecryptAccess(TC.ADDRESS_3); // different value
 
         Spf.SpfAccess memory access2 = Spf.SpfAccess({ciphertext: TC.CIPHERTEXT_ID_1, changes: changes2});
 
