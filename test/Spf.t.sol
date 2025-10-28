@@ -301,20 +301,21 @@ contract SpfTest is Test {
     function test_RequestAcl_EmitsEvent_And_Parameters() public {
         // Prepare test data
         Spf.SpfAccessChange[] memory changes = new Spf.SpfAccessChange[](6);
-        changes[0] = Spf.addCrossChainContractAsAdmin(1, TC.ADDRESS_1);
+        changes[0] = Spf.addContractAsAdmin(TC.ADDRESS_1);
         changes[1] = Spf.addSignerAsAdmin(TC.ADDRESS_1);
-        changes[2] = Spf.allowCrossChainContractRun(1, TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
+        changes[2] = Spf.allowContractRun(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
         changes[3] = Spf.allowSignerRun(TC.ADDRESS_2, TC.SPF_LIBRARY, TC.SPF_PROGRAM);
-        changes[4] = Spf.allowCrossChainContractDecrypt(1, TC.ADDRESS_3);
+        changes[4] = Spf.allowContractDecrypt(TC.ADDRESS_3);
         changes[5] = Spf.allowSignerDecrypt(TC.ADDRESS_3);
 
         // Calculate expected parameters
         Spf.SpfAccessChange[] memory expectedChanges = new Spf.SpfAccessChange[](6);
-        expectedChanges[0] = Spf.SpfAccessChange({metaData: 0x00000000000000000001 << 176, payload: new bytes32[](1)});
+        expectedChanges[0] = Spf.SpfAccessChange({metaData: block.chainid << 176, payload: new bytes32[](1)});
         expectedChanges[0].payload[0] = bytes32(bytes20(TC.ADDRESS_1));
         expectedChanges[1] = Spf.SpfAccessChange({metaData: 0x0001 << 240, payload: new bytes32[](1)});
         expectedChanges[1].payload[0] = bytes32(bytes20(TC.ADDRESS_1));
-        expectedChanges[2] = Spf.SpfAccessChange({metaData: 0x01000000000000000001 << 176, payload: new bytes32[](3)});
+        expectedChanges[2] =
+            Spf.SpfAccessChange({metaData: ((0x01 << 72) + block.chainid) << 176, payload: new bytes32[](3)});
         expectedChanges[2].payload[0] = bytes20(TC.ADDRESS_2);
         expectedChanges[2].payload[1] = Spf.SpfLibrary.unwrap(TC.SPF_LIBRARY);
         expectedChanges[2].payload[2] = Spf.SpfProgram.unwrap(TC.SPF_PROGRAM);
@@ -322,7 +323,8 @@ contract SpfTest is Test {
         expectedChanges[3].payload[0] = bytes20(TC.ADDRESS_2);
         expectedChanges[3].payload[1] = Spf.SpfLibrary.unwrap(TC.SPF_LIBRARY);
         expectedChanges[3].payload[2] = Spf.SpfProgram.unwrap(TC.SPF_PROGRAM);
-        expectedChanges[4] = Spf.SpfAccessChange({metaData: 0x02000000000000000001 << 176, payload: new bytes32[](1)});
+        expectedChanges[4] =
+            Spf.SpfAccessChange({metaData: ((0x02 << 72) + block.chainid) << 176, payload: new bytes32[](1)});
         expectedChanges[4].payload[0] = bytes20(TC.ADDRESS_3);
         expectedChanges[5] = Spf.SpfAccessChange({metaData: 0x0201 << 240, payload: new bytes32[](1)});
         expectedChanges[5].payload[0] = bytes20(TC.ADDRESS_3);
