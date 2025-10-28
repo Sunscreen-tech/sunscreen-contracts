@@ -565,31 +565,19 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
-    /// Prepare an access change that adds a given contract on a given chain as admin to the ciphertext
-    ///
-    /// @param chainId: the chain ID for the contract to add as admin
-    /// @param contractAddress: the address of the contract to add as admin
-    function addCrossChainContractAsAdmin(uint64 chainId, address contractAddress)
-        internal
-        pure
-        returns (SpfAccessChange memory)
-    {
-        uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
-        metaData <<= 8;
-        metaData += uint8(SpfAccessEntityType.EthereumContract);
-        metaData <<= 64;
-        metaData += chainId;
-        metaData <<= 176;
-        bytes32[] memory payload = new bytes32[](1);
-        payload[0] = bytes20(contractAddress);
-        return SpfAccessChange({metaData: metaData, payload: payload});
-    }
-
     /// Prepare an access change that adds a given contract on the current chain as admin to the ciphertext
     ///
     /// @param contractAddress: the address of the contract on the current chain to add as admin
     function addContractAsAdmin(address contractAddress) internal view returns (SpfAccessChange memory) {
-        return addCrossChainContractAsAdmin(uint64(block.chainid), contractAddress);
+        uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += uint64(block.chainid);
+        metaData <<= 176;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(contractAddress);
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Prepare an access change that adds a given signer address as admin to the ciphertext
@@ -605,31 +593,6 @@ library Spf {
         return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
-    /// Prepare an access change that allows a given contract on a given chain to run a given program
-    /// using the ciphertext as input
-    ///
-    /// @param chainId: the chain ID for the contract to allow run
-    /// @param contractAddress: the address of the contract to allow run
-    /// @param lib: the library of the program to allow run
-    /// @param prog: the entry point function name of the program to allow run
-    function allowCrossChainContractRun(uint64 chainId, address contractAddress, SpfLibrary lib, SpfProgram prog)
-        internal
-        pure
-        returns (SpfAccessChange memory)
-    {
-        uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
-        metaData <<= 8;
-        metaData += uint8(SpfAccessEntityType.EthereumContract);
-        metaData <<= 64;
-        metaData += chainId;
-        metaData <<= 176;
-        bytes32[] memory payload = new bytes32[](3);
-        payload[0] = bytes20(contractAddress);
-        payload[1] = SpfLibrary.unwrap(lib);
-        payload[2] = SpfProgram.unwrap(prog);
-        return SpfAccessChange({metaData: metaData, payload: payload});
-    }
-
     /// Prepare an access change that allows a given contract on the current chain to run a given program
     /// using the ciphertext as input
     ///
@@ -641,7 +604,17 @@ library Spf {
         view
         returns (SpfAccessChange memory)
     {
-        return allowCrossChainContractRun(uint64(block.chainid), contractAddress, lib, prog);
+        uint256 metaData = uint8(SpfAccessChangeType.AllowRun);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += uint64(block.chainid);
+        metaData <<= 176;
+        bytes32[] memory payload = new bytes32[](3);
+        payload[0] = bytes20(contractAddress);
+        payload[1] = SpfLibrary.unwrap(lib);
+        payload[2] = SpfProgram.unwrap(prog);
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Prepare an access change that allows a given signer address to run a given program using the ciphertext
@@ -666,31 +639,19 @@ library Spf {
         return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
-    /// Prepare an access change that allows a given contract on a given chain to decrypt the ciphertext
-    ///
-    /// @param chainId: the chain ID for the address to allow decryption
-    /// @param contractAddress: the address of the contract to allow decryption
-    function allowCrossChainContractDecrypt(uint64 chainId, address contractAddress)
-        internal
-        pure
-        returns (SpfAccessChange memory)
-    {
-        uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
-        metaData <<= 8;
-        metaData += uint8(SpfAccessEntityType.EthereumContract);
-        metaData <<= 64;
-        metaData += chainId;
-        metaData <<= 176;
-        bytes32[] memory payload = new bytes32[](1);
-        payload[0] = bytes20(contractAddress);
-        return SpfAccessChange({metaData: metaData, payload: payload});
-    }
-
     /// Prepare an access change that allows a given contract on the current chain to decrypt the ciphertext
     ///
     /// @param contractAddress: the address of the contract on the current chain to allow decryption
     function allowContractDecrypt(address contractAddress) internal view returns (SpfAccessChange memory) {
-        return allowCrossChainContractDecrypt(uint64(block.chainid), contractAddress);
+        uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
+        metaData <<= 8;
+        metaData += uint8(SpfAccessEntityType.EthereumContract);
+        metaData <<= 64;
+        metaData += uint64(block.chainid);
+        metaData <<= 176;
+        bytes32[] memory payload = new bytes32[](1);
+        payload[0] = bytes20(contractAddress);
+        return SpfAccessChange({metaData: metaData, payload: payload});
     }
 
     /// Prepare an access change that allows a given signer address to decrypt the ciphertext
