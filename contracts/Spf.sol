@@ -568,7 +568,7 @@ library Spf {
     /// Prepare an access change that adds a given contract on the current chain as admin to the ciphertext
     ///
     /// @param contractAddress: the address of the contract on the current chain to add as admin
-    function addContractAsAdmin(address contractAddress) internal view returns (SpfAccessChange memory) {
+    function prepareContractAdminAccess(address contractAddress) internal view returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
         metaData <<= 8;
         metaData += uint8(SpfAccessEntityType.EthereumContract);
@@ -583,7 +583,7 @@ library Spf {
     /// Prepare an access change that adds a given signer address as admin to the ciphertext
     ///
     /// @param signerAddress: the signer address to add as admin
-    function addSignerAsAdmin(address signerAddress) internal pure returns (SpfAccessChange memory) {
+    function prepareSignerAdminAccess(address signerAddress) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AddAdmin);
         metaData <<= 8;
         metaData += uint8(SpfAccessEntityType.External);
@@ -599,7 +599,7 @@ library Spf {
     /// @param contractAddress: the address of the contract on the current chain to allow run
     /// @param lib: the library of the program to run
     /// @param prog: the entry point function name of the program to run
-    function allowContractRun(address contractAddress, SpfLibrary lib, SpfProgram prog)
+    function prepareContractRunAccess(address contractAddress, SpfLibrary lib, SpfProgram prog)
         internal
         view
         returns (SpfAccessChange memory)
@@ -623,7 +623,7 @@ library Spf {
     /// @param signerAddress: the signer address to allow run
     /// @param lib: the library of the program to run
     /// @param prog: the entry point function name of the program to run
-    function allowSignerRun(address signerAddress, SpfLibrary lib, SpfProgram prog)
+    function prepareSignerRunAccess(address signerAddress, SpfLibrary lib, SpfProgram prog)
         internal
         pure
         returns (SpfAccessChange memory)
@@ -642,7 +642,7 @@ library Spf {
     /// Prepare an access change that allows a given contract on the current chain to decrypt the ciphertext
     ///
     /// @param contractAddress: the address of the contract on the current chain to allow decryption
-    function allowContractDecrypt(address contractAddress) internal view returns (SpfAccessChange memory) {
+    function prepareContractDecryptAccess(address contractAddress) internal view returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
         metaData <<= 8;
         metaData += uint8(SpfAccessEntityType.EthereumContract);
@@ -657,7 +657,7 @@ library Spf {
     /// Prepare an access change that allows a given signer address to decrypt the ciphertext
     ///
     /// @param signerAddress: the signer address to allow decryption
-    function allowSignerDecrypt(address signerAddress) internal pure returns (SpfAccessChange memory) {
+    function prepareSignerDecryptAccess(address signerAddress) internal pure returns (SpfAccessChange memory) {
         uint256 metaData = uint8(SpfAccessChangeType.AllowDecrypt);
         metaData <<= 8;
         metaData += uint8(SpfAccessEntityType.External);
@@ -855,6 +855,32 @@ library Spf {
         returns (SpfParameter memory)
     {
         return requestAcl(address(this), ciphertext, changes);
+    }
+
+    /// Requests to allow the current contract to run a given program using the ciphertext as input
+    /// with the transaction sender as the requester.
+    ///
+    /// @dev see `prepareContractRunAccess` and `requestAclAsSender`
+    function senderAllowCurrentContractRun(SpfParameter memory ciphertext, SpfLibrary lib, SpfProgram prog)
+        internal
+        returns (SpfParameter memory)
+    {
+        Spf.SpfAccessChange[] memory accessChanges = new Spf.SpfAccessChange[](1);
+        accessChanges[0] = Spf.prepareContractRunAccess(address(this), lib, prog);
+        return Spf.requestAclAsSender(ciphertext, accessChanges);
+    }
+
+    /// Requests to allow the given signer to decrypt the ciphertext with the current contract
+    /// as the requester.
+    ///
+    /// @dev see `prepareSignerDecryptAccess` and `requestAclAsContract`
+    function contractAllowSignerDecrypt(SpfParameter memory ciphertext, address signer)
+        internal
+        returns (SpfParameter memory)
+    {
+        Spf.SpfAccessChange[] memory accessChanges = new Spf.SpfAccessChange[](1);
+        accessChanges[0] = Spf.prepareSignerDecryptAccess(signer);
+        return Spf.requestAclAsContract(ciphertext, accessChanges);
     }
 
     /// Generates a unique ciphertext identifier for a specific output from an
