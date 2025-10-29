@@ -138,7 +138,7 @@ contract SpfTest is Test {
         params[1] = Spf.createCiphertextArrayParameter(identifiers);
         params[2] = Spf.createOutputCiphertextParameter(32);
         params[3] = Spf.createOutputCiphertextArrayParameter(32, 4);
-        params[4] = Spf.createPlaintextParameter(32, 1);
+        params[4] = Spf.createPlaintextParameter(32, int128(1));
         params[5] = Spf.createPlaintextArrayParameter(32, values);
 
         // Calculate expected parameters
@@ -238,6 +238,74 @@ contract SpfTest is Test {
 
         // Assert payload element matches
         assertEq(result.payload[0], expected.payload[0], "Payload element should match");
+    }
+
+    function test_pack1Parameters() public pure {
+        Spf.SpfParameter memory p1 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        Spf.SpfParameter[] memory result = Spf.pack1Parameters(p1);
+
+        assertEq(result.length, 1, "Array should have 1 element");
+        assertEq(result[0].metaData, p1.metaData, "Parameter metadata should match");
+        assertEq(result[0].payload.length, p1.payload.length, "Parameter payload length should match");
+        assertEq(result[0].payload[0], p1.payload[0], "Parameter payload should match");
+    }
+
+    function test_pack3Parameters() public pure {
+        Spf.SpfParameter memory p1 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        Spf.SpfParameter memory p2 = Spf.createPlaintextParameter(16, int128(42));
+        Spf.SpfParameter memory p3 = Spf.createOutputCiphertextParameter(8);
+
+        Spf.SpfParameter[] memory result = Spf.pack3Parameters(p1, p2, p3);
+
+        assertEq(result.length, 3, "Array should have 3 elements");
+        assertEq(result[0].metaData, p1.metaData, "First parameter metadata should match");
+        assertEq(result[0].payload[0], p1.payload[0], "First parameter payload should match");
+        assertEq(result[1].metaData, p2.metaData, "Second parameter metadata should match");
+        assertEq(result[1].payload[0], p2.payload[0], "Second parameter payload should match");
+        assertEq(result[2].metaData, p3.metaData, "Third parameter metadata should match");
+    }
+
+    function test_pack9Parameters() public pure {
+        Spf.SpfParameter memory p1 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        Spf.SpfParameter memory p2 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
+        Spf.SpfParameter memory p3 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_3);
+        Spf.SpfParameter memory p4 = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_4);
+        Spf.SpfParameter memory p5 = Spf.createPlaintextParameter(8, int128(1));
+        Spf.SpfParameter memory p6 = Spf.createPlaintextParameter(8, int128(2));
+        Spf.SpfParameter memory p7 = Spf.createPlaintextParameter(8, int128(3));
+        Spf.SpfParameter memory p8 = Spf.createOutputCiphertextParameter(16);
+        Spf.SpfParameter memory p9 = Spf.createOutputCiphertextParameter(32);
+
+        Spf.SpfParameter[] memory result = Spf.pack9Parameters(p1, p2, p3, p4, p5, p6, p7, p8, p9);
+
+        assertEq(result.length, 9, "Array should have 9 elements");
+        assertEq(result[0].payload[0], p1.payload[0], "First parameter should match");
+        assertEq(result[1].payload[0], p2.payload[0], "Second parameter should match");
+        assertEq(result[2].payload[0], p3.payload[0], "Third parameter should match");
+        assertEq(result[3].payload[0], p4.payload[0], "Fourth parameter should match");
+        assertEq(result[4].payload[0], p5.payload[0], "Fifth parameter should match");
+        assertEq(result[5].payload[0], p6.payload[0], "Sixth parameter should match");
+        assertEq(result[6].payload[0], p7.payload[0], "Seventh parameter should match");
+        assertEq(result[7].metaData, p8.metaData, "Eighth parameter should match");
+        assertEq(result[8].metaData, p9.metaData, "Ninth parameter should match");
+    }
+
+    function test_createPlaintextParameter_uint256Overload() public pure {
+        // Test that uint256 overload produces same result as int128 version
+        uint256 value256 = 42;
+        int128 value128 = 42;
+
+        Spf.SpfParameter memory paramFromUint = Spf.createPlaintextParameter(16, value256);
+        Spf.SpfParameter memory paramFromInt = Spf.createPlaintextParameter(16, value128);
+
+        assertEq(paramFromUint.metaData, paramFromInt.metaData, "Metadata should match between overloads");
+        assertEq(paramFromUint.payload.length, paramFromInt.payload.length, "Payload length should match");
+        assertEq(paramFromUint.payload[0], paramFromInt.payload[0], "Payload should match between overloads");
+
+        // Test with larger uint256 value
+        uint256 largeValue = 65535;
+        Spf.SpfParameter memory paramLarge = Spf.createPlaintextParameter(16, largeValue);
+        assertEq(paramLarge.payload[0], bytes32(uint256(65535)), "Large value should be encoded correctly");
     }
 
     function test_GetOutputHandle() public pure {
