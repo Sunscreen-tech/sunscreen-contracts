@@ -175,6 +175,71 @@ contract SpfTest is Test {
         assertEq(Spf.SpfRunHandle.unwrap(returnedHandle), expectedHash);
     }
 
+    function test_createCiphertextArrayFromParams() public pure {
+        // Test with multiple ciphertext parameters
+        Spf.SpfParameter[] memory ciphertextParams = new Spf.SpfParameter[](3);
+        ciphertextParams[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_1);
+        ciphertextParams[1] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_2);
+        ciphertextParams[2] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_3);
+
+        // Call the function under test
+        Spf.SpfParameter memory result = Spf.createCiphertextArrayFromParams(ciphertextParams);
+
+        // Manually construct expected result
+        Spf.SpfParameter memory expected = Spf.SpfParameter({metaData: 0x01 << 248, payload: new bytes32[](3)});
+        expected.payload[0] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_1);
+        expected.payload[1] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_2);
+        expected.payload[2] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_3);
+
+        // Assert metadata matches
+        assertEq(result.metaData, expected.metaData, "Metadata should match CiphertextArray type");
+
+        // Assert payload length matches
+        assertEq(result.payload.length, expected.payload.length, "Payload length should be 3");
+
+        // Assert each payload element matches
+        for (uint256 i = 0; i < result.payload.length; i++) {
+            assertEq(result.payload[i], expected.payload[i], "Payload element should match");
+        }
+    }
+
+    function test_createCiphertextArrayFromParams_EmptyArray() public pure {
+        // Test with empty array
+        Spf.SpfParameter[] memory emptyParams = new Spf.SpfParameter[](0);
+        Spf.SpfParameter memory result = Spf.createCiphertextArrayFromParams(emptyParams);
+
+        // Expected result
+        Spf.SpfParameter memory expected = Spf.SpfParameter({metaData: 0x01 << 248, payload: new bytes32[](0)});
+
+        // Assert metadata matches
+        assertEq(result.metaData, expected.metaData, "Metadata should match CiphertextArray type");
+
+        // Assert payload is empty
+        assertEq(result.payload.length, 0, "Payload length should be 0");
+    }
+
+    function test_createCiphertextArrayFromParams_SingleElement() public pure {
+        // Test with single element
+        Spf.SpfParameter[] memory singleParam = new Spf.SpfParameter[](1);
+        singleParam[0] = Spf.createCiphertextParameter(TC.CIPHERTEXT_ID_4);
+
+        // Call the function under test
+        Spf.SpfParameter memory result = Spf.createCiphertextArrayFromParams(singleParam);
+
+        // Manually construct expected result
+        Spf.SpfParameter memory expected = Spf.SpfParameter({metaData: 0x01 << 248, payload: new bytes32[](1)});
+        expected.payload[0] = Spf.SpfCiphertextIdentifier.unwrap(TC.CIPHERTEXT_ID_4);
+
+        // Assert metadata matches
+        assertEq(result.metaData, expected.metaData, "Metadata should match CiphertextArray type");
+
+        // Assert payload length matches
+        assertEq(result.payload.length, 1, "Payload length should be 1");
+
+        // Assert payload element matches
+        assertEq(result.payload[0], expected.payload[0], "Payload element should match");
+    }
+
     function test_GetOutputHandle() public pure {
         // Test output handles for different indices
         Spf.SpfCiphertextIdentifier output0 =
