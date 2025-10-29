@@ -559,6 +559,15 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
+    /// Create a parameter that corresponds to a single plaintext (uint256 overload).
+    ///
+    /// @param bitWidth The bit width of the plaintext, must be one of 8, 16, 32, 64
+    /// @param value The plaintext value as uint256
+    /// @return SpfParameter A parameter that corresponds to a single plaintext
+    function createPlaintextParameter(uint8 bitWidth, uint256 value) internal pure returns (SpfParameter memory) {
+        return createPlaintextParameter(bitWidth, int128(uint128(value)));
+    }
+
     /// Create a parameter that corresponds to a plaintext array.
     ///
     /// @param bitWidth: the bit width of the plaintext values, must be one of 8, 16, 32, 64
@@ -897,6 +906,221 @@ library Spf {
         Spf.SpfAccessChange[] memory accessChanges = new Spf.SpfAccessChange[](1);
         accessChanges[0] = Spf.prepareSignerDecryptAccess(signer);
         return Spf.requestAclAsContract(ciphertext, accessChanges);
+    }
+
+    /// Pack 1 parameter into an array
+    ///
+    /// @param p1 The parameter
+    /// @return SpfParameter[] An array containing the parameter
+    function pack1Parameters(SpfParameter memory p1) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](1);
+        params[0] = p1;
+        return params;
+    }
+
+    /// Pack 2 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack2Parameters(SpfParameter memory p1, SpfParameter memory p2)
+        internal
+        pure
+        returns (SpfParameter[] memory)
+    {
+        SpfParameter[] memory params = new SpfParameter[](2);
+        params[0] = p1;
+        params[1] = p2;
+        return params;
+    }
+
+    /// Pack 3 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack3Parameters(SpfParameter memory p1, SpfParameter memory p2, SpfParameter memory p3)
+        internal
+        pure
+        returns (SpfParameter[] memory)
+    {
+        SpfParameter[] memory params = new SpfParameter[](3);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        return params;
+    }
+
+    /// Pack 4 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack4Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](4);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        return params;
+    }
+
+    /// Pack 5 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @param p5 The fifth parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack5Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4,
+        SpfParameter memory p5
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](5);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        params[4] = p5;
+        return params;
+    }
+
+    /// Pack 6 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @param p5 The fifth parameter
+    /// @param p6 The sixth parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack6Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4,
+        SpfParameter memory p5,
+        SpfParameter memory p6
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](6);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        params[4] = p5;
+        params[5] = p6;
+        return params;
+    }
+
+    /// Pack 7 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @param p5 The fifth parameter
+    /// @param p6 The sixth parameter
+    /// @param p7 The seventh parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack7Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4,
+        SpfParameter memory p5,
+        SpfParameter memory p6,
+        SpfParameter memory p7
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](7);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        params[4] = p5;
+        params[5] = p6;
+        params[6] = p7;
+        return params;
+    }
+
+    /// Pack 8 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @param p5 The fifth parameter
+    /// @param p6 The sixth parameter
+    /// @param p7 The seventh parameter
+    /// @param p8 The eighth parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack8Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4,
+        SpfParameter memory p5,
+        SpfParameter memory p6,
+        SpfParameter memory p7,
+        SpfParameter memory p8
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](8);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        params[4] = p5;
+        params[5] = p6;
+        params[6] = p7;
+        params[7] = p8;
+        return params;
+    }
+
+    /// Pack 9 parameters into an array
+    ///
+    /// @param p1 The first parameter
+    /// @param p2 The second parameter
+    /// @param p3 The third parameter
+    /// @param p4 The fourth parameter
+    /// @param p5 The fifth parameter
+    /// @param p6 The sixth parameter
+    /// @param p7 The seventh parameter
+    /// @param p8 The eighth parameter
+    /// @param p9 The ninth parameter
+    /// @return SpfParameter[] An array containing the parameters
+    function pack9Parameters(
+        SpfParameter memory p1,
+        SpfParameter memory p2,
+        SpfParameter memory p3,
+        SpfParameter memory p4,
+        SpfParameter memory p5,
+        SpfParameter memory p6,
+        SpfParameter memory p7,
+        SpfParameter memory p8,
+        SpfParameter memory p9
+    ) internal pure returns (SpfParameter[] memory) {
+        SpfParameter[] memory params = new SpfParameter[](9);
+        params[0] = p1;
+        params[1] = p2;
+        params[2] = p3;
+        params[3] = p4;
+        params[4] = p5;
+        params[5] = p6;
+        params[6] = p7;
+        params[7] = p8;
+        params[8] = p9;
+        return params;
     }
 
     /// Generates a unique ciphertext identifier for a specific output from an
