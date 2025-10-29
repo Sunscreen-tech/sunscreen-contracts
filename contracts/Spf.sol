@@ -494,6 +494,22 @@ library Spf {
         return SpfParameter({metaData: metaData, payload: payload});
     }
 
+    /// Create a parameter that corresponds to a ciphertext array from an array of single ciphertext parameters.
+    ///
+    /// @param parameters array of single ciphertext parameters
+    /// @return SpfParameter A parameter that corresponds to a ciphertext array
+    function createCiphertextArrayFromParams(SpfParameter[] memory parameters)
+        internal
+        pure
+        returns (SpfParameter memory)
+    {
+        SpfCiphertextIdentifier[] memory identifiers = new SpfCiphertextIdentifier[](parameters.length);
+        for (uint256 i = 0; i < parameters.length; i++) {
+            identifiers[i] = SpfCiphertextIdentifier.wrap(parameters[i].payload[0]);
+        }
+        return createCiphertextArrayParameter(identifiers);
+    }
+
     /// Create a parameter that corresponds to an output ciphertext
     ///
     /// @param bitWidth The number of bits in this output ciphertext
